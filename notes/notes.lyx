@@ -77,7 +77,7 @@ key "Mccullagh1989"
 \begin_inset Quotes eld
 \end_inset
 
-the generalization,
+The Generalization,
 \begin_inset Quotes erd
 \end_inset
 
@@ -212,7 +212,8 @@ key "Venter2007"
 \end_inset
 
 , it is actually possible to relax the exponential family assumption considerabl
-y, though the math becomes potentially more difficult.
+y, though the math becomes potentially more difficult (i.e., it requires brain
+ time).
  My exploration of generalized linear models is motivated partly by another
  paper I read on combining the cox model with MARS to perform survival analysis
 \begin_inset CommandInset citation
@@ -676,7 +677,7 @@ base regressors
 \begin_inset Quotes erd
 \end_inset
 
- other than linear regression.
+ other than linear regression?.
  It turns out that is pretty much exactly how generalized additive models
  (GAM) work.
  So, I'm going to just try it and see how it works.
@@ -723,6 +724,16 @@ key "Altman"
 .
  It's not clear to me how the software should handle these situations.
  
+\end_layout
+
+\begin_layout Standard
+Update: I'm solving the complete separation problem by checking the domain
+ of the link function against 
+\begin_inset Formula $\mu$
+\end_inset
+
+ at each step.
+ If the domain is violated, I issue a warning and break out of the algorithm.
 \end_layout
 
 \begin_layout Standard
