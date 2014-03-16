@@ -1,0 +1,676 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+I've been reading 
+\emph on
+Generalized Linear Models 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Mccullagh1989"
+
+\end_inset
+
+,
+\emph default
+ which presents generalized linear models as an extension of general linear
+ models in a very clear and thoughtful way.
+ My favorite part so far is section 2.2.1, entitled 
+\begin_inset Quotes eld
+\end_inset
+
+the generalization,
+\begin_inset Quotes erd
+\end_inset
+
+ reproduced below:
+\end_layout
+
+\begin_layout Quote
+2.2.1 The generalization
+\end_layout
+
+\begin_layout Quote
+To simplify the transition to generalized inear models, we shall rearrange
+ 
+\emph on
+[the definition of general linear models]
+\emph default
+ slightly to produce the following three part specification:
+\end_layout
+
+\begin_layout Quote
+1.
+ The 
+\emph on
+random component:
+\emph default
+ the components of 
+\begin_inset Formula $\mathbf{Y}$
+\end_inset
+
+ have independent Normal distributions with 
+\begin_inset Formula $E\left(\mathbf{Y}\right)=\mathbf{\mu}$
+\end_inset
+
+ and constant variance 
+\begin_inset Formula $\sigma^{2}$
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Quote
+2.
+ The 
+\emph on
+systematic component:
+\emph default
+ covariates 
+\begin_inset Formula $\mathbf{x_{1}},\mathbf{x_{2}},\ldots,\mathbf{x_{p}}$
+\end_inset
+
+ produce a 
+\emph on
+linear predictor
+\emph default
+ 
+\begin_inset Formula $\mathbf{\eta}$
+\end_inset
+
+ given by 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{\eta}=\sum_{1}^{p}\mathbf{x_{j}}\beta_{j};
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Quote
+3.The 
+\emph on
+link
+\emph default
+ between the random and systematic components:
+\begin_inset Formula 
+\begin{equation}
+\mathbf{\mu}=\mathbf{\eta}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Quote
+This generalization introduces a new symbol 
+\begin_inset Formula $\mathbf{\eta}$
+\end_inset
+
+ for the linear predictor and the third component then specifes that 
+\begin_inset Formula $\mu$
+\end_inset
+
+ and 
+\begin_inset Formula $\eta$
+\end_inset
+
+ are in fact identical.
+ If we write
+\begin_inset Formula 
+\begin{equation}
+\mathbf{\eta_{i}}=g\left(\mathbf{\mu_{i}}\right),
+\end{equation}
+
+\end_inset
+
+then 
+\begin_inset Formula $g\left(\cdot\right)$
+\end_inset
+
+ will be called the 
+\emph on
+link function.
+
+\emph default
+ In this formulation, classical linear models have a Normal (or Gaussian)
+ distribution in component 1 and the identity function for the link in component
+ 3.
+ Generalized linear models allow two extensions; first the distribution
+ in component 1 may come from an exponential family other than the Normal,
+ and secondly the link function in component 3 may become any monotonic
+ differentiable function.
+\end_layout
+
+\begin_layout Standard
+According to another resource 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Venter2007"
+
+\end_inset
+
+, it is actually possible to relax the exponential family assumption considerabl
+y, though the math becomes potentially more difficult.
+ My exploration of generalized linear models is motivated partly by another
+ paper I read on combining the cox model with MARS to perform survival analysis
+\begin_inset CommandInset citation
+LatexCommand cite
+key "LeBlanc1999"
+
+\end_inset
+
+.
+ In this paper, the authors used a reweighting method similar to iteratively
+ reweighted least squares to adapt a weighted MARS implementation to maximize
+ the Cox partial likelihood function (instead of a normal squared error
+ loss).
+ It wasn't clear how successful their method really was, but I think its
+ deficiencies were due to the fact that they did not perform iterative reweighti
+ng, but rather only a single weight computation.
+\end_layout
+
+\begin_layout Standard
+All this reading has given me an idea.
+ Generalized linear models relax parts 1 and 3 of the specification of general
+ linear models from 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Mccullagh1989"
+
+\end_inset
+
+.
+ Is it possible also to relax part 2? For example, could I replace the linear
+ predictor with a MARS predictor? Could I use any regressor capable of handling
+ weighted samples? That's what I'd like to investigate here.
+ Firstly, notation.
+ Let 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ be the matrix of independent variables (not necessarily statistically independe
+nt, obviously) with columns 
+\begin_inset Formula $\mathbf{x_{j}}$
+\end_inset
+
+ and entries 
+\begin_inset Formula $x_{ij}$
+\end_inset
+
+.
+ Let 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ be the observed response.
+ Let 
+\begin_inset Formula $g\left(\cdot\right)$
+\end_inset
+
+ be the link function such that 
+\begin_inset Formula $\mathbf{\eta}=g\left(\mathbf{\mu}\right)$
+\end_inset
+
+ and overloaded such that 
+\begin_inset Formula $\eta_{i}=g\left(\mu_{i}\right)$
+\end_inset
+
+, with 
+\begin_inset Formula $\mathbf{\eta}$
+\end_inset
+
+ the regression predictor (not necessarily linear any longer) and 
+\begin_inset Formula $\mathbf{\mu}$
+\end_inset
+
+ the expected value of the response distribution such that 
+\begin_inset Formula $\mathbf{Y}\sim f_{Y}\left(\mathbf{\mu}\right)$
+\end_inset
+
+, as always, with 
+\begin_inset Formula $f\left(\cdot\right)$
+\end_inset
+
+ the response distribution, which possibly has some repressed additional
+ parameters.
+ Introduce the notation 
+\begin_inset Formula $h\left(\cdot;\cdot\right)$
+\end_inset
+
+ for the regression function, with parameters/structure 
+\begin_inset Formula $\mathbf{\beta}$
+\end_inset
+
+ so that 
+\begin_inset Formula $\mathbf{\eta}=h\left(\mathbf{X};\mathbf{\beta}\right)$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Let's dive in.
+ A usual way to fit a generalized linear model is as follows:
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $\mathbf{\hat{\mu}_{0}}=\mathbf{y}$
+\end_inset
+
+ and 
+\begin_inset Formula $k=0$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Until convergence, do:
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{\hat{\eta}_{k}}=g\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{z_{k}}=\mathbf{\hat{\eta}_{k}}+\left(\mathbf{y}-\mathbf{\hat{\mu}_{k}}\right)\dot{g}\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{w_{k}^{-1}}=\left(\dot{g}\left(\mathbf{\hat{\mu}_{k}}\right)\right)^{2}V\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Regress 
+\begin_inset Formula $\mathbf{z_{k}}$
+\end_inset
+
+ on 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ with weights 
+\begin_inset Formula $\mathbf{w_{k}}$
+\end_inset
+
+ to get 
+\begin_inset Formula $\mathbf{\hat{\eta}_{k+1}}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Set 
+\begin_inset Formula $k=k+1$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+This is iteratively reweighted least squares (IRLS).
+ In the case of generalized linear models, the regression step is linear
+ regression and 
+\begin_inset Formula $V\left(\cdot\right)$
+\end_inset
+
+ is the variance function for the response distribution (which is from an
+ exponential family).
+ Why does this work? Well, IRLS is just a special case of Fisher's scoring
+ method.
+ More specifically, it is shown in section 2.5.1 of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Mccullagh1989"
+
+\end_inset
+
+ that the likelihood equations of any response distribution from an exponential
+ family are 
+\begin_inset Formula 
+\begin{equation}
+\sum_{i}w_{i}\left(y_{i}-\mu_{i}\right)\dot{g}\left(\hat{\mu}_{ki}\right)x_{ij}=0,\forall j
+\end{equation}
+
+\end_inset
+
+By likelihood equations, they mean the equations 
+\begin_inset Formula $\frac{\partial l}{\partial\beta_{j}}=0$
+\end_inset
+
+, where 
+\begin_inset Formula $l$
+\end_inset
+
+ is the log likelihood function.
+ Let 
+\begin_inset Formula $\mathbf{u}=\frac{\partial l}{\partial\mathbf{\beta}}$
+\end_inset
+
+.
+ They further show that the negative expected value of the Hessian matrix,
+ 
+\begin_inset Formula $\mathbf{A}=-E\left(\frac{\partial^{2}l}{\partial\beta_{r}\partial\beta_{s}}\right)$
+\end_inset
+
+, is given by 
+\begin_inset Formula 
+\begin{eqnarray}
+A_{rs} & = & -E\left(\frac{\partial u_{r}}{\partial\beta_{s}}\right)\\
+ & = & -E\left[\sum_{i}w_{i}x_{ir}x_{is}\right]
+\end{eqnarray}
+
+\end_inset
+
+They then show that the Newton's method step equation 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{A}\delta\mathbf{b}=\mathbf{u}
+\end{equation}
+
+\end_inset
+
+defining update 
+\begin_inset Formula $\mathbf{b^{\ast}}=\mathbf{b}+\delta\mathbf{b}$
+\end_inset
+
+ is equivalent to
+\begin_inset Formula 
+\begin{equation}
+\left(\mathbf{A}\mathbf{b^{\ast}}\right)_{r}=\sum_{i}\mathbf{W}\mathbf{x}_{r}\left\{ \mathbf{\eta}+\left(\mathbf{y}-\mathbf{\mu}\right)\dot{g}\left(\mathbf{\mu}\right)\right\} 
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+What if my model is a function?
+\end_layout
+
+\begin_layout Standard
+I mean, obviously my model is a function.
+ But usually you think of a GLM as being a set of parameters, 
+\begin_inset Formula $\mathbf{\beta}$
+\end_inset
+
+.
+ But I'm saying there are no parameters, or at least that there is not a
+ fixed dimensional vector of parameters that completely defines my model
+ and over which I will optimize.
+ Look, my model is just a function, call it 
+\begin_inset Formula $\phi$
+\end_inset
+
+, and suppose that there is some set, 
+\begin_inset Formula $\psi$
+\end_inset
+
+, of functions that defines the space of possible models.
+ MARS is a good example.
+ MARS finds a function that approximates some other function from which
+ there are samples available.
+ That's what every regression method does.
+ MARS also uses a GCV criterion to prevent overfitting the sample.
+ Basically, the GCV is a functional and MARS finds the function 
+\begin_inset Formula $\phi\in\psi$
+\end_inset
+
+ that minimizes it (or at least makes it pretty small).
+ Every regression method works this way, from linear regression to random
+ forests.
+ 
+\end_layout
+
+\begin_layout Standard
+I want my MARS, though, instead of minimizing the 
+\begin_inset Formula $\text{GCV}\left(y,\hat{y}\right)$
+\end_inset
+
+, to maximize some log likelihood 
+\begin_inset Formula $l\left(y,\hat{y}\right)$
+\end_inset
+
+.
+ Is there a way I can turn the maximum likelihood problem into a minimum
+ GCV problem? Suppose it is possible to write the log likelihood as a function
+ of 
+\begin_inset Formula $\nu\left(y\right)-\hat{y}$
+\end_inset
+
+, so 
+\begin_inset Formula $l\left(\nu\left(y\right),\hat{y}\right)=l\left(\nu\left(y\right)-\hat{y}\right)$
+\end_inset
+
+, where 
+\begin_inset Formula $\nu$
+\end_inset
+
+ is some known function.
+ I propose the following procedure.
+ Let 
+\begin_inset Formula $z=\nu\left(y\right)-\hat{y}$
+\end_inset
+
+.
+ Let 
+\begin_inset Formula $R$
+\end_inset
+
+ be my regression method, so that 
+\begin_inset Formula $\phi=R\left(X,y,w\right)$
+\end_inset
+
+ runs the method with predictors 
+\begin_inset Formula $X$
+\end_inset
+
+, response 
+\begin_inset Formula $y$
+\end_inset
+
+, and sample weights 
+\begin_inset Formula $w$
+\end_inset
+
+, and produces the resulting model function 
+\begin_inset Formula $\phi$
+\end_inset
+
+ (which in the case of MARS optimizes the GCV with sample weights 
+\begin_inset Formula $w$
+\end_inset
+
+).
+ Do the following:
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $w_{0}=\mathbf{1}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $\phi_{0}=R\left(X,\nu\left(y\right),w_{0}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $i=0$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Until converged, do:
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $\hat{y}_{i}=\phi_{i}\left(X\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Compute new weights 
+\begin_inset Formula $w_{i+1}=\delta\left(\left.\frac{dl}{dz}\right|_{\hat{y}_{i}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $\phi_{i+1}=R\left(X,\nu\left(y\right),w_{i+1}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $i\equiv i+1$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+where 
+\begin_inset Formula $\delta$
+\end_inset
+
+ is some monotonic function I've yet to work out.
+ Maybe it's just the identity function.
+ The heuristic argument is this: At each step, the algorithm figures out
+ which sample points would provide the most improvement in likelihood if
+ they moved closer to 
+\begin_inset Formula $\nu\left(y\right)$
+\end_inset
+
+ and weights them more highly, so that at the next iteration the likelihood
+ should be improved.
+ It may be possible to do this without iterating: that is, to find the optimal
+ weights right away from the start.
+ But that would require more math and that math would be specific to the
+ particular 
+\begin_inset Formula $R$
+\end_inset
+
+.
+ This method is nice because it could work for any 
+\begin_inset Formula $R$
+\end_inset
+
+, although it may be that different 
+\begin_inset Formula $R$
+\end_inset
+
+s will require different 
+\begin_inset Formula $\delta$
+\end_inset
+
+s.
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "notes"
+options "naturemag"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
