@@ -1,6 +1,7 @@
 from sklearn.base import BaseEstimator, clone, RegressorMixin
 import abc
 import numpy
+import warnings
 
 class LinearRegressor(BaseEstimator, RegressorMixin):
     def fit(self, X, y, sample_weight=None):
@@ -15,32 +16,48 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
         return self.intercept_ + numpy.dot(X, self.coef_)
         
 class GeneralizedRegressor(BaseEstimator):
-    def __init__(self, base_regressor, grm_configuration, max_iter=10):
+    def __init__(self, base_regressor, grm_configuration, max_iter=10, convergence_threshold=1e-8):
         self.base_regressor = base_regressor
         self.grm_configuration = grm_configuration
         self.max_iter = max_iter
+        self.convergence_threshold = convergence_threshold
         
     def fit(self, X, y, sample_weight=None, *args, **kwargs):
-        
         link_params, likelihood_params = self.grm_configuration.take_params(*args, **kwargs)
         mu = self.grm_configuration.initialize_mu(X, y)
         self.record_ = []
         eta = self.grm_configuration.link(mu, link_params)
         i = 0
-        while (not self.convergence_check()) and (i < self.max_iter):
+        score = float('inf')
+        self.regressor_ = None
+        converged = False
+        while (not converged) and (i < self.max_iter):
             i += 1
+            prev_regressor = self.regressor_
             self.regressor_ = clone(self.base_regressor)
             z = eta + (y - mu)*self.grm_configuration.link_deriv1(mu, link_params)
-            # FIXME: These weights seem to be wrong
             w = -1.0 / ((self.grm_configuration.link_deriv1(mu, link_params)**2)*self.grm_configuration.likelihood_deriv2(mu, likelihood_params))
             self.regressor_.fit(X, z, sample_weight=w)
+            prev_eta = eta
+            prev_mu = mu
             eta = self.regressor_.predict(X, *args, **kwargs)
             mu = self.grm_configuration.link_inverse(eta, link_params)
-            self.record_.append(self.grm_configuration.score(y, mu))
+            if not self.grm_configuration.link_domain.check(mu):
+                warnings.warn('Link domain violated.  This may be due to complete separation of the training data or a similar issue.  The resulting model may not be reliable.')
+                break
+            prev_score = score
+            score = self.grm_configuration.score(y, mu)
+            if score >= prev_score:
+                eta = prev_eta
+                mu = prev_mu
+                self.regressor_ = prev_regressor
+                break
+            self.record_.append(score)
+            denominator = numpy.average(prev_eta**2, weights=w)
+            numerator = numpy.average((prev_eta - eta)**2, weights=w)
+            if numerator / float(denominator) < self.convergence_threshold:
+                break
         return self
-    
-    def convergence_check(self):
-        return False
     
     def predict(self, X, *args, **kwargs):
         link_params, _ = self.grm_configuration.take_params(*args, **kwargs)
@@ -53,6 +70,10 @@ class GeneralizedRegressor(BaseEstimator):
         return self.grm_configuration.score(y, mu)
 
 class GrmConfiguration(object):
+    @abc.abstractproperty
+    def link_domain(self):
+        raise NotImplementedError
+    
     @abc.abstractmethod
     def link(self, mu, params):
         raise NotImplementedError
@@ -86,6 +107,10 @@ class ExponentialFamilyGrmConfiguration(GrmConfiguration):
         self.approve_link_function(link_function)
         self.link_function = link_function
     
+    @property
+    def link_domain(self):
+        return self.link_function.domain
+    
     @abc.abstractmethod
     def approve_link_function(self, link_function):
         raise NotImplementedError
@@ -112,6 +137,22 @@ class ExponentialFamilyGrmConfiguration(GrmConfiguration):
     def variance_function(self, mu):
         raise NotImplementedError
 
+class Interval(object):
+    def __init__(self, lower=float('-inf'), upper=float('inf'), lower_closed=False, upper_closed=False):
+        self.lower = lower
+        self.upper = upper
+        self.lower_closed = lower_closed
+        self.upper_closed = upper_closed
+        
+    def check(self, arr):
+        res = arr < self.lower
+        if not self.lower_closed:
+            res = res | (arr == self.lower)
+        res = res | (arr > self.upper)
+        if not self.upper_closed:
+            res = res | (arr == self.upper)
+        return not numpy.any(res)
+
 class LinkFunction(object):
     @abc.abstractmethod
     def eval(self, mu, params):
@@ -121,7 +162,15 @@ class LinkFunction(object):
     def eval_deriv1(self, mu, params):
         raise NotImplementedError
     
+    @abc.abstractproperty
+    def domain(self):
+        raise NotImplementedError
+    
 class IdentityLinkFunction(LinkFunction):
+    @property
+    def domain(self):
+        return Interval()
+    
     def eval(self, mu, params):
         return mu 
     
@@ -134,6 +183,10 @@ class IdentityLinkFunction(LinkFunction):
 class LogitLinkFunction(LinkFunction):
     def __init__(self, m=1.0):
         self.m = float(m)
+    
+    @property
+    def domain(self):
+        return Interval(lower=0.0, upper=1.0)
 
     def eval(self, mu, params):
         return -numpy.log(self.m/mu - 1.0)
@@ -173,13 +226,7 @@ class BinomialGrmConfiguration(ExponentialFamilyGrmConfiguration):
     def variance_function(self, mu):
         return self.m*mu * (self.m - self.m*mu)
     
-    def score(self, y, mu):
-#         nonzero = y.copy()
-#         nonzero[y==0] = 0.5
-#         nonm = y.copy()
-#         nonm[y==self.m]=0.5
-        
+    def score(self, y, mu):        
         return 2 * numpy.sum(y[y>0]*numpy.log(y[y>0]/mu[y>0])) + 2 * numpy.sum((self.m-y[y<self.m])*numpy.log((self.m-y[y<self.m])/(self.m-mu[y<self.m])))
         
-
-#         
+      
