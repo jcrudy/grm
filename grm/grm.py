@@ -229,4 +229,4 @@ class BinomialGrmConfiguration(ExponentialFamilyGrmConfiguration):
     def score(self, y, mu):        
         return 2 * numpy.sum(y[y>0]*numpy.log(y[y>0]/mu[y>0])) + 2 * numpy.sum((self.m-y[y<self.m])*numpy.log((self.m-y[y<self.m])/(self.m-mu[y<self.m])))
         
-      
+        
