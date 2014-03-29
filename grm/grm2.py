@@ -49,6 +49,17 @@ class BinomialLoss(LossFunction):
     def deriv2(self, y, mu):
         return self.m*mu * (self.m - self.m*mu)
 
+# class ProportionalHazardsLoss(LossFunction):
+#     def eval(self, y, mu, event):
+#         order = numpy.argsort(y)
+#         l = event * numpy.log(mu)
+#         for i in range(order.shape[0]):
+#             l += event[order[i]] * event[order[i:]] * numpy.log(mu[order[i:]])
+#         return -numpy.sum(l)
+#     
+#     def deriv2(self, y, mu, event):
+#         raise NotImplementedError
+
 class LinkFunction(Function):
     __metaclass__ = ABCMeta
 
@@ -71,6 +82,9 @@ class IdentityLink(LinkFunction):
         return numpy.ones_like(mu)
 
 class LogitLink(LinkFunction):
+    def __init__(self, m):
+        self.m = m
+        
     def eval(self, mu):
         return -numpy.log(self.m/mu - 1.0)
     
@@ -79,7 +93,17 @@ class LogitLink(LinkFunction):
     
     def deriv(self, mu):
         return 1.0 / (self.m*(mu - mu**2))
-        
+
+class ExpLink(LinkFunction):
+    def eval(self, mu):
+        return numpy.exp(mu)
+    
+    def inv(self, eta):
+        return numpy.log(eta)
+    
+    def deriv(self, mu):
+        return numpy.exp(mu)
+    
 class Shrinker(object):
     def __init__(self, factor=0.1):
         self.factor = factor
