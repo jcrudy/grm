@@ -1,0 +1,734 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+The approximate loss function:
+\begin_inset Formula 
+\begin{eqnarray}
+l\left(\mu_{0}+\Delta\mu,y\right) & \approx & l\left(\mu_{0},y\right)+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)\Delta\mu+\frac{1}{2}\Delta\mu^{T}\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu
+\end{eqnarray}
+
+\end_inset
+
+The way I implement now:
+\end_layout
+
+\begin_layout Enumerate
+Let 
+\begin_inset Formula $\mathbf{\hat{\mu}_{0}}=\mathbf{y}$
+\end_inset
+
+ and 
+\begin_inset Formula $k=0$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Until convergence, do:
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{\hat{\eta}_{k}}=g\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{z_{k}}=\mathbf{\hat{\eta}_{k}}+\left(\mathbf{y}-\mathbf{\hat{\mu}_{k}}\right)\dot{g}\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\mathbf{w_{k}^{-1}}=\left(\dot{g}\left(\mathbf{\hat{\mu}_{k}}\right)\right)^{2}V\left(\mathbf{\hat{\mu}_{k}}\right)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Regress 
+\begin_inset Formula $\mathbf{z_{k}}$
+\end_inset
+
+ on 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ with weights 
+\begin_inset Formula $\mathbf{w_{k}}$
+\end_inset
+
+ to get 
+\begin_inset Formula $\mathbf{\hat{\eta}_{k+1}}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Enumerate
+Set 
+\begin_inset Formula $k=k+1$
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+Seek a loss function of the form:
+\begin_inset Formula 
+\begin{eqnarray}
+l^{\prime}\left(\mu,y\right) & = & \left(z-\mu\right)^{T}Q\left(z-\mu\right)\\
+ & = & \left(z-\mu\right)^{T}Q\left(z-\mu\right)
+\end{eqnarray}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray}
+l_{i}^{\prime} & = & \sum_{i}\sum_{j}\left(z_{i}-\mu_{i}\right)Q_{ij}\left(z_{j}-\mu_{j}\right)\\
+ & = & Q_{ij}\left(z_{i}-\mu_{i}\right)\left(z_{j}-\mu_{j}\right)
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $g\left(\mu\right)=h\left(x\right)$
+\end_inset
+
+ that best approximates the loss function 
+\begin_inset Formula $l\left(\mu\right)$
+\end_inset
+
+ near the current solution 
+\begin_inset Formula $\mu^{\left(t\right)}$
+\end_inset
+
+, where 
+\begin_inset Formula $Q$
+\end_inset
+
+ is symmetric positive definite.
+ Well, what is the taylor expansion of 
+\begin_inset Formula $l^{\prime}$
+\end_inset
+
+? Derivatives:
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l^{\prime}}{\partial\mu_{k}} & = & Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)+Q_{ij}\left(z_{i}-\mu_{i}\right)\left(\frac{\partial z_{j}}{\partial\mu_{k}}-\delta_{jk}\right)\\
+ & = & Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)+Q_{ji}\left(z_{i}-\mu_{i}\right)\left(\frac{\partial z_{j}}{\partial\mu_{k}}-\delta_{jk}\right)\\
+ & = & Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)+Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\\
+ & = & 2Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\\
+ & = & 2Q_{ij}z_{j}\frac{\partial z_{i}}{\mu_{k}}-2Q_{ij}z_{j}\delta_{ik}\\
+ &  & -2Q_{ij}\mu_{j}\frac{\partial z_{i}}{\mu_{k}}+2Q_{ij}\mu_{j}\delta_{ik}
+\end{eqnarray}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial^{2}l^{\prime}}{\partial\mu_{k}\mu_{h}} & = & 2Q_{ij}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\left(\frac{\partial z_{j}}{\partial\mu_{h}}-\delta_{jh}\right)+2Q_{ij}\left(z_{j}-\mu_{j}\right)\frac{\partial^{2}z_{i}}{\partial\mu_{k}\partial\mu_{h}}
+\end{eqnarray}
+
+\end_inset
+
+Taylor expansion about 
+\begin_inset Formula $\mu$
+\end_inset
+
+:
+\begin_inset Formula 
+\begin{eqnarray}
+l^{\prime}\left(\mu+\Delta\mu\right) & \approx & Q_{ij}\left(z_{i}-\mu_{i}\right)\left(z_{j}-\mu_{j}\right)+2Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\Delta\mu_{k}\\
+ &  & +Q_{ij}\left(\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\left(\frac{\partial z_{j}}{\partial\mu_{h}}-\delta_{jh}\right)+\left(z_{j}-\mu_{j}\right)\frac{\partial^{2}z_{i}}{\partial\mu_{k}\partial\mu_{h}}\right)\Delta\mu_{k}\Delta\mu_{h}\nonumber 
+\end{eqnarray}
+
+\end_inset
+
+Need to solve:
+\begin_inset Formula 
+\begin{equation}
+l^{\prime}\approx l
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $z$
+\end_inset
+
+ and 
+\begin_inset Formula $Q$
+\end_inset
+
+.
+ This can't be done unless we add a constant to 
+\begin_inset Formula $l^{\prime}$
+\end_inset
+
+, but that's fine since we really only care about its derivatives.
+ Solve the simultaneous equations:
+\begin_inset Formula 
+\begin{eqnarray}
+2Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right) & = & \frac{\partial l}{\partial\mu_{k}}\\
+Q_{ij}\left(\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\left(\frac{\partial z_{j}}{\partial\mu_{h}}-\delta_{jh}\right)+\left(z_{j}-\mu_{j}\right)\frac{\partial^{2}z_{i}}{\partial\mu_{k}\partial\mu_{h}}\right) & = & \frac{\partial^{2}l}{\partial\mu_{k}\partial\mu_{h}}
+\end{eqnarray}
+
+\end_inset
+
+First one:
+\begin_inset Formula 
+\begin{eqnarray}
+2Q_{ij}\left(z_{j}-\mu_{j}\right)\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right) & = & \frac{\partial l}{\partial\mu_{k}}\\
+Q_{ij} & = & \frac{1}{2}\frac{\partial l}{\partial\mu_{k}}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)^{-1}\left(z_{j}-\mu_{j}\right)^{-1}\\
+ & = & \frac{\frac{\partial l}{\partial\mu_{k}}}{2\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\left(z_{j}-\mu_{j}\right)}
+\end{eqnarray}
+
+\end_inset
+
+or in matrix notation
+\begin_inset Formula 
+\begin{eqnarray}
+2\left(\frac{\partial z}{\partial\mu}-\frac{\partial\mu}{\partial\mu}\right)Q\left(z-\mu\right) & = & \left(\frac{\partial l}{\partial\mu}\right)^{T}\\
+Q\left(z-\mu\right) & = & \frac{1}{2}\left(\frac{\partial z}{\partial\mu}-\frac{\partial\mu}{\partial\mu}\right)^{-1}\left(\frac{\partial l}{\partial\mu}\right)^{T}
+\end{eqnarray}
+
+\end_inset
+
+which is 
+\begin_inset Formula 
+\begin{equation}
+Q_{ij}\left(z_{j}-\mu_{j}\right)=\frac{1}{2}A_{ij}\left(\frac{\partial l}{\partial\mu_{j}}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $A=\left(\frac{\partial z}{\partial\mu}-\frac{\partial\mu}{\partial\mu}\right)^{-1}$
+\end_inset
+
+.
+ Second one can't be in matrix notation because it has a rank 3 tensor:
+\begin_inset Formula 
+\begin{eqnarray}
+Q_{ij}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-\delta_{ik}\right)\left(\frac{\partial z_{j}}{\partial\mu_{h}}-\delta_{jh}\right)+Q_{ij}\left(z_{j}-\mu_{j}\right)\frac{\partial^{2}z_{i}}{\partial\mu_{k}\partial\mu_{h}} & = & \frac{\partial^{2}l}{\partial\mu_{k}\partial\mu_{h}}
+\end{eqnarray}
+
+\end_inset
+
+Assume 
+\begin_inset Formula $z_{i}$
+\end_inset
+
+ depends on 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ only if 
+\begin_inset Formula $i=k$
+\end_inset
+
+.
+ Then
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l^{\prime}}{\partial\mu_{k}}=2Q_{ij}\left(z_{j}-\mu_{j}\right)\delta_{ik}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-1\right)
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l^{\prime}}{\partial\mu_{k}\mu_{h}}=2Q_{ij}\delta_{ik}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-1\right)\delta_{jh}\left(\frac{\partial z_{j}}{\partial\mu_{h}}-1\right)
+\end{equation}
+
+\end_inset
+
+In matrix notation:
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l^{\prime}}{\partial\mu}=Qz\frac{\partial z}{\partial\mu}-Q\mu
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l^{\prime}}{\partial\mu_{k}\mu_{h}}=2Q_{ij}\delta_{ik}\left(\frac{\partial z_{i}}{\partial\mu_{k}}-1\right)\delta_{jh}\left(\frac{\partial z_{j}}{\partial\mu_{h}}-1\right)
+\end{equation}
+
+\end_inset
+
+Oh, wait you guys.
+ Actually, for the purpose of the Taylor expansion I should be treating
+ both 
+\begin_inset Formula $z$
+\end_inset
+
+ and 
+\begin_inset Formula $Q$
+\end_inset
+
+ as constant! Then
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l^{\prime}}{\partial\mu}=-2Q\left(z-\mu\right)
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l^{\prime}}{\partial\mu^{2}}=2Q
+\end{equation}
+
+\end_inset
+
+and equating the Taylor terms:
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu} & = & -2Q\left(z-\mu\right)\\
+\frac{\partial^{2}l}{\partial\mu^{2}} & = & 2Q
+\end{eqnarray}
+
+\end_inset
+
+That is, 
+\begin_inset Formula $Q$
+\end_inset
+
+ follows straightforwardly from the observed information matrix and 
+\begin_inset Formula $z$
+\end_inset
+
+ can then be obtained by solving a linear system! I made this way too hard.
+\end_layout
+
+\begin_layout Section*
+Now for real
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $\mathbf{X}$
+\end_inset
+
+ be the data matrix with response 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ and let 
+\begin_inset Formula $l\left(\mathbf{y},\mathbf{\eta}\right)$
+\end_inset
+
+ be the loss function.
+ The loss function may be of the form 
+\begin_inset Formula 
+\begin{equation}
+l\left(\mathbf{y},\mathbf{\eta}\right)=l_{l}\left(\mathbf{y},\mathbf{\mu}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $g\left(\mathbf{\mu}\right)=\mathbf{\eta}$
+\end_inset
+
+.
+ That is, put a little 
+\begin_inset Formula $l$
+\end_inset
+
+ in the subscript to denote that there's some external link function.
+ Okay, so the Taylor expansion is 
+\begin_inset Formula 
+\begin{equation}
+l\left(\eta_{0}+\mathbf{\Delta\eta}\right)\approx l\left(\mathbf{\eta_{0}}\right)+\frac{\partial l}{\partial\mathbf{\eta}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}+\frac{1}{2}\mathbf{\Delta\eta}^{T}\frac{\partial^{2}l}{\partial\mathbf{\eta}^{2}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}
+\end{equation}
+
+\end_inset
+
+or with a link function 
+\begin_inset Formula 
+\begin{equation}
+l\left(\eta_{0}+\mathbf{\Delta\eta}\right)\approx l\left(\mathbf{\eta_{0}}\right)+\frac{\partial l_{l}}{\partial\mathbf{\mu}}\left(\mathbf{\mu_{0}}\right)\frac{\partial\mathbf{\mu}}{\partial\mathbf{\eta}}\left(\mathbf{\eta}_{0}\right)\mathbf{\Delta\eta}+\frac{1}{2}\mathbf{\Delta\eta}^{T}\frac{\partial^{2}l_{l}}{\partial\mathbf{\mu}^{2}}\left(\mathbf{\mu_{0}}\right)\left(\frac{\partial\mathbf{\mu}}{\partial\mathbf{\eta}}\left(\mathbf{\eta}_{0}\right)\right)^{2}\mathbf{\Delta\eta}
+\end{equation}
+
+\end_inset
+
+I want to approximate the loss function as a generalized least squares problem,
+ such that 
+\begin_inset Formula 
+\begin{equation}
+l\left(\mathbf{\eta}\right)\approx\mathbf{\alpha}+\left(\mathbf{z}-\mathbf{\eta}\right)^{T}\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)
+\end{equation}
+
+\end_inset
+
+for some 
+\begin_inset Formula $\mathbf{\alpha}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{z}$
+\end_inset
+
+, and 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+.
+ I find the correct values by equating the Taylor expansions of the two
+ functions.
+ Firstly, let 
+\begin_inset Formula $l^{\prime}\left(\mathbf{\eta}\right)=\mathbf{\alpha}+\left(\mathbf{z}-\mathbf{\eta}\right)^{T}\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)$
+\end_inset
+
+.
+ Since 
+\begin_inset Formula $l^{\prime}$
+\end_inset
+
+ is only quadratic, it is exactly equal to its quadratic Taylor expansion,
+ which is 
+\begin_inset Formula 
+\begin{equation}
+l^{\prime}\left(\mathbf{\eta_{0}}+\mathbf{\Delta\eta}\right)=l^{\prime}\left(\mathbf{\eta_{0}}\right)+\frac{\partial l^{\prime}}{\partial\mathbf{\eta}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}+\frac{1}{2}\mathbf{\Delta\eta}^{T}\frac{\partial^{2}l^{\prime}}{\partial\mathbf{\eta}^{2}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}
+\end{equation}
+
+\end_inset
+
+The derivatives are 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l^{\prime}}{\partial\mathbf{\eta}}\left(\mathbf{\eta_{0}}\right)=-2\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l^{\prime}}{\partial\mathbf{\eta}^{2}}\left(\mathbf{\eta_{0}}\right)=2\mathbf{Q}
+\end{equation}
+
+\end_inset
+
+and it's plain to see that 
+\begin_inset Formula $l^{\prime}$
+\end_inset
+
+ can be made to exactly equal to the quadratic approximation of 
+\begin_inset Formula $l$
+\end_inset
+
+ by choosing
+\begin_inset Formula 
+\begin{eqnarray}
+\mathbf{Q} & = & \frac{1}{2}\frac{\partial^{2}l_{l}}{\partial\mathbf{\mu}^{2}}\left(\mathbf{\mu_{0}}\right)\left(\frac{\partial\mathbf{\mu}}{\partial\mathbf{\eta}}\left(\mathbf{\eta}_{0}\right)\right)^{2}\\
+ & = & \frac{1}{2}\frac{\partial^{2}l_{l}}{\partial\mathbf{\mu}^{2}}\left(\mathbf{\mu_{0}}\right)\left(\frac{\partial\mathbf{\eta}}{\partial\mu}\left(\mathbf{\eta}_{0}\right)\right)^{-2}\\
+\mathbf{z} & = & \mathbf{\eta}-\frac{1}{2}\mathbf{Q}^{-1}\frac{\partial l_{l}}{\partial\mathbf{\mu}}\left(\mathbf{\mu_{0}}\right)\frac{\partial\mathbf{\mu}}{\partial\mathbf{\eta}}\left(\mathbf{\eta}_{0}\right)\\
+ & = & \mathbf{\eta}-\frac{1}{2}\mathbf{Q}^{-1}\frac{\partial l_{l}}{\partial\mathbf{\mu}}\left(\mathbf{\mu_{0}}\right)\left(\frac{\partial\mathbf{\eta}}{\partial\mathbf{\mu}}\right)^{-1}\left(\mathbf{\eta}_{0}\right)\\
+\mathbf{\alpha} & = & l_{l}\left(\mathbf{\mu_{0}}\right)-\left(\mathbf{z}-\mathbf{\eta}\right)^{T}\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Normal distribution
+\end_layout
+
+\begin_layout Standard
+If I want to maximize the log likelihood of a normal distribution and 
+\begin_inset Formula $\mathbf{\eta}=\mathbf{\mu}$
+\end_inset
+
+, then:
+\begin_inset Formula 
+\begin{eqnarray}
+l\left(\mathbf{\mu}\right) & = & \left\Vert \left(\mathbf{\mu}-\mathbf{y}\right)\right\Vert ^{2}\\
+\frac{\partial\mathbf{\mu}}{\partial\mathbf{\eta}}\left(\mathbf{\eta}_{0}\right) & = & \mathbf{I}\\
+\frac{\partial l_{l}}{\partial\mathbf{\mu}} & = & 2\left(\mathbf{\mu}-\mathbf{y}\right)\\
+\frac{\partial^{2}l_{l}}{\partial\mathbf{\mu}^{2}}\left(\mathbf{\mu_{0}}\right) & = & 2\mathbf{I}
+\end{eqnarray}
+
+\end_inset
+
+so
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+ is 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{Q}=\mathbf{I}
+\end{equation}
+
+\end_inset
+
+Then 
+\begin_inset Formula 
+\begin{equation}
+\mathbf{Q}^{-1}=\mathbf{I}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{eqnarray}
+\mathbf{z} & = & \mathbf{\eta}-\frac{1}{2}\mathbf{I}2\left(\mathbf{\mu}-\mathbf{y}\right)\mathbf{I}\\
+ & = & \mathbf{\eta}+\left(\mathbf{y}-\mathbf{\mu}\right)\\
+ & = & \mathbf{y}
+\end{eqnarray}
+
+\end_inset
+
+and I've recovered the regular old sum of squared errors loss function,
+ like I should.
+ Note that I had a choice of how exactly to write 
+\begin_inset Formula $l$
+\end_inset
+
+, and I chose the way that made the elements of 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+ nonnegative.
+\end_layout
+
+\begin_layout Section*
+Binomial distribution
+\end_layout
+
+\begin_layout Standard
+The likelihood function for the binomial distribution is 
+\begin_inset Formula 
+\begin{equation}
+L\left(\mathbf{\mu}\right)=\prod_{i}\left(\begin{array}{c}
+n_{i}\\
+y_{i}
+\end{array}\right)\left(\mu_{i}\right)^{y_{i}}\left(1-\mu_{i}\right)^{\left(n_{i}-y_{i}\right)}
+\end{equation}
+
+\end_inset
+
+and the negative log likelihood (neglecting the constant term) is 
+\begin_inset Formula 
+\begin{eqnarray}
+l\left(\mathbf{\mu}\right) & = & -\sum_{i}\left[y_{i}\log\left(\mu_{i}\right)+\left(n_{i}-y_{i}\right)\log\left(1-\mu_{i}\right)\right]\\
+ & = & -\sum_{i}\left[y_{i}\log\left(\frac{\mu_{i}}{1-\mu_{i}}\right)+n_{i}\log\left(1-\mu_{i}\right)\right]
+\end{eqnarray}
+
+\end_inset
+
+Then
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mathbf{\mu_{i}}} & =- & y_{i}\frac{1-\mu_{i}}{\mu_{i}}\left(-1/\mu_{i}-\frac{1-\mu_{i}}{\mu_{i}^{2}}\right)-\frac{n_{i}}{1-\mu_{i}}\\
+ &  & \frac{n_{i}\mu_{i}-y_{i}}{\mu_{i}\left(1-\mu_{i}\right)}\\
+ & = & \frac{n_{i}\mu_{i}-y_{i}}{\mu_{i}-\mu_{i}^{2}}\\
+\frac{\partial^{2}l}{\partial\mu_{i}^{2}} & = & \frac{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}{\mu_{i}^{2}\left(1-\mu_{i}\right)^{2}}
+\end{eqnarray}
+
+\end_inset
+
+The usual thing is to take the expected value, which is
+\begin_inset Formula 
+\begin{eqnarray}
+E\left(\frac{\partial^{2}l}{\partial\mu_{i}^{2}}\right) & = & -\frac{2\mu_{i}E\left(y_{i}\right)-\mu_{i}^{2}n_{i}-E\left(y_{i}\right)}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & -\frac{2n_{i}\mu_{i}^{2}-\mu_{i}^{2}n_{i}-n_{i}\mu_{i}}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & -\frac{n_{i}\left(\mu_{i}^{2}-\mu_{i}\right)}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & \frac{n_{i}\left(\mu_{i}-\mu_{i}^{2}\right)}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & \frac{n_{i}}{\left(\mu_{i}-\mu_{i}^{2}\right)}
+\end{eqnarray}
+
+\end_inset
+
+which is the right answer.
+ See, for example, equation (4.15) of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Mccullagh1989"
+
+\end_inset
+
+.
+ Can the second derivative be negative? The highest possible value of 
+\begin_inset Formula $y_{i}$
+\end_inset
+
+ is 
+\begin_inset Formula $n_{i}$
+\end_inset
+
+, so look at
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial^{2}l}{\partial\mu_{i}^{2}} & > & -\frac{2\mu_{i}n_{i}-\mu_{i}^{2}n_{i}-n_{i}}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & -\frac{n_{i}\left(2\mu_{i}-\mu_{i}^{2}-1\right)}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}\\
+ & = & \frac{n_{i}\left(\mu_{i}-1\right)^{2}}{\left(\mu_{i}-\mu_{i}^{2}\right)^{2}}
+\end{eqnarray}
+
+\end_inset
+
+which is strictly postive.
+ The usual link function is 
+\begin_inset Formula 
+\begin{equation}
+\log\left(\frac{\mu_{i}}{1-\mu_{i}}\right)=\eta_{i}
+\end{equation}
+
+\end_inset
+
+Then 
+\begin_inset Formula 
+\begin{eqnarray}
+\mu_{i} & = & \frac{1}{1+e^{-\eta_{i}}}\\
+\frac{d\mu_{i}}{d\eta_{i}} & = & \frac{e^{-\eta}}{\left(1+e^{-\eta_{i}}\right)^{2}}\\
+ & = & \frac{1}{1+e^{-\eta_{i}}}\left(1-\frac{1}{1+e^{-\eta_{i}}}\right)
+\end{eqnarray}
+
+\end_inset
+
+Okay, so using the Fisher information, 
+\begin_inset Formula 
+\begin{equation}
+Q_{ii}=\frac{1}{2}\frac{n_{i}}{\mu_{i}\left(1-\mu_{i}\right)}\frac{e^{-2\eta}}{\left(1+e^{-\eta_{i}}\right)^{4}}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{eqnarray}
+z_{i} & = & \eta_{i}-\frac{\mu_{i}\left(1-\mu_{i}\right)}{n_{i}}\frac{\left(1+e^{-\eta_{i}}\right)^{4}}{e^{-2\eta}}\left(\frac{n_{i}\mu_{i}-y_{i}}{\mu_{i}\left(1-\mu_{i}\right)}\right)\left(\frac{e^{-\eta}}{\left(1+e^{-\eta_{i}}\right)^{2}}\right)\\
+ & = & \eta_{i}-\left(\mu_{i}-\frac{y_{i}}{n_{i}}\right)\frac{\left(1+e^{-\eta_{i}}\right)^{2}}{e^{-\eta}}
+\end{eqnarray}
+
+\end_inset
+
+or for general link functions,
+\begin_inset Formula 
+\begin{eqnarray}
+Q_{ii} & = & \frac{1}{2}\frac{n_{i}}{\mu_{i}\left(1-\mu_{i}\right)}\left(\frac{\partial\eta_{i}}{\partial\mu_{i}}\right)^{-2}\\
+z_{i} & = & \eta_{i}+\left(\frac{y_{i}}{n_{i}}-\mu_{i}\right)\left(\frac{\partial\eta_{i}}{\partial\mu_{i}}\right)
+\end{eqnarray}
+
+\end_inset
+
+Or, using the observed information,
+\begin_inset Formula 
+\begin{equation}
+Q_{ii}=\frac{1}{2}\frac{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}{\mu_{i}^{2}\left(1-\mu_{i}\right)^{2}}\frac{e^{-2\eta}}{\left(1+e^{-\eta_{i}}\right)^{4}}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{eqnarray}
+z_{i} & = & \eta_{i}-\left(\frac{\mu_{i}^{2}\left(1-\mu_{i}\right)^{2}}{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}\right)\left(\frac{\left(1+e^{-\eta_{i}}\right)^{4}}{e^{-2\eta}}\right)\left(\frac{n_{i}\mu_{i}-y_{i}}{\mu_{i}\left(1-\mu_{i}\right)}\right)\left(\frac{e^{-\eta}}{\left(1+e^{-\eta_{i}}\right)^{2}}\right)\nonumber \\
+ & = & \eta_{i}-\left(\frac{n_{i}\mu_{i}\left(1-\mu_{i}\right)}{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}\right)\left(\mu_{i}-\frac{y_{i}}{n_{i}}\right)\left(\frac{\left(1+e^{-\eta_{i}}\right)^{2}}{e^{-\eta}}\right)
+\end{eqnarray}
+
+\end_inset
+
+or with general link function,
+\begin_inset Formula 
+\begin{eqnarray}
+Q_{ii} & = & \frac{1}{2}\frac{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}{\mu_{i}^{2}\left(1-\mu_{i}\right)^{2}}\left(\frac{\partial\eta_{i}}{\partial\mu_{i}}\right)^{-2}\\
+z_{i} & = & \eta_{i}+\left(\frac{n_{i}\mu_{i}\left(1-\mu_{i}\right)}{\mu_{i}^{2}n_{i}+y_{i}-2\mu_{i}y_{i}}\right)\left(\frac{y_{i}}{n_{i}}-\mu_{i}\right)\frac{\partial\eta_{i}}{\partial\mu_{i}}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "notes"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

@@ -736,6 +736,883 @@ Update: I'm solving the complete separation problem by checking the domain
  If the domain is violated, I issue a warning and break out of the algorithm.
 \end_layout
 
+\begin_layout Section*
+Survival Analysis
+\end_layout
+
+\begin_layout Standard
+Of course, the goal of all this is nonparametric survival analysis, preferably
+ with scikit-learn but at least with MARS.
+ Let's start with proportional hazards.
+ The hazard function is 
+\begin_inset Formula 
+\begin{eqnarray}
+h\left(\mathbf{x},t\right) & = & \lambda_{0}\left(t\right)e^{\phi\left(\mathbf{x}\right)}\\
+ & = & \lambda_{0}\left(t\right)\mathbf{\mu}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $\phi$
+\end_inset
+
+ is the regression model and I have implicitly defined my link function
+ as 
+\begin_inset Formula $\mathbf{\mu}=e^{\mathbf{\eta}}=e^{\phi\left(\mathbf{x}\right)}$
+\end_inset
+
+.
+ Let 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ be the survival times and 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ be the censoring status, where 
+\begin_inset Formula $c_{i}=1$
+\end_inset
+
+ if unit 
+\begin_inset Formula $i$
+\end_inset
+
+ experienced an event and 
+\begin_inset Formula $0$
+\end_inset
+
+ otherwise.
+ The partial likelihood function is 
+\begin_inset Formula 
+\begin{eqnarray}
+l\left(\mathbf{\mu}\right) & = & \sum_{i:c_{i}=1}\left(\log\left(\mu_{i}\right)-\log\left(\sum_{j:y_{j}>y_{i}}\mu_{j}\right)\right)\\
+ & = & \sum_{i=1}^{n}\left[c_{i}\log\left(\mu_{i}\right)-c_{i}\log\left(\sum_{j=1}^{n}\mu_{j}I_{y_{j}>y_{i}}\right)\right]\\
+ & = & \left(\sum_{i=1}^{n}c_{i}\log\left(\mu_{i}\right)\right)-\left(\sum_{i=1}^{n}c_{i}\log\left(\sum_{j=1}^{n}\mu_{j}I_{y_{j}>y_{i}}\right)\right)
+\end{eqnarray}
+
+\end_inset
+
+The important derivatives are
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\mu_{k}}=\frac{c_{k}}{\mu_{k}}-\sum_{i=1}^{n}\frac{c_{i}I_{y_{k}>y_{i}}}{\sum_{j=1}^{n}\mu_{j}I_{y_{j}>y_{i}}}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\mu_{k}^{2}}=-\frac{c_{k}}{\mu_{k}^{2}}+\sum_{i=1}^{n}\frac{c_{i}I_{y_{k}>y_{i}}}{\left(\sum_{j=1}^{n}\mu_{j}I_{y_{j}>y_{i}}\right)^{2}}
+\end{equation}
+
+\end_inset
+
+There are also off-diagonal elements of the Hessian, so actually 
+\begin_inset Formula 
+\begin{equation}
+\frac{d^{2}l}{d\mu_{k_{1}}d\mu_{k_{2}}}=-\frac{c_{k_{1}}}{\mu_{k_{1}}^{2}}I_{k_{1}=k_{2}}+\sum_{i=1}^{n}\frac{c_{i}I_{y_{k_{1}}>y_{i}}I_{y_{k_{2}}>y_{i}}}{\left(\sum_{j=1}^{n}\mu_{j}I_{y_{j}>y_{i}}\right)^{2}}
+\end{equation}
+
+\end_inset
+
+Note that ties are not treated specially.
+ Therefore this likelihood and its derivatives correspond to Breslow's method.
+ Efron's method might be better, but let's keep it simple for now.
+\end_layout
+
+\begin_layout Section*
+What if I drop the proportional hazards assumption?
+\end_layout
+
+\begin_layout Standard
+Instead, let 
+\begin_inset Formula 
+\begin{eqnarray}
+h\left(\mathbf{x},t\right) & = & e^{\phi\left(\mathbf{x},t\right)}\\
+ & = & \mathbf{\mu}
+\end{eqnarray}
+
+\end_inset
+
+I need to figure out the likelihood function.
+ Again, let 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ be the times and 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ the censoring type, with 
+\begin_inset Formula $c_{i}=1$
+\end_inset
+
+ indicating a failure / death / event occurred for statistical unit 
+\begin_inset Formula $i$
+\end_inset
+
+.
+ The pdf is 
+\begin_inset Formula 
+\begin{equation}
+f\left(\mathbf{x},t\right)=S\left(\mathbf{x},t\right)h\left(\mathbf{x},t\right)
+\end{equation}
+
+\end_inset
+
+and the cdf is 
+\begin_inset Formula 
+\begin{equation}
+F\left(\mathbf{x},t\right)=1-S\left(\mathbf{x},t\right)
+\end{equation}
+
+\end_inset
+
+The survival function is 
+\begin_inset Formula 
+\begin{equation}
+S\left(\mathbf{x},t\right)=e^{-H\left(\mathbf{x},t\right)}
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $H\left(\mathbf{x},t\right)=\int_{0}^{t}h\left(\mathbf{x},\tau\right)d\tau$
+\end_inset
+
+.
+ Then the likelihood function is 
+\begin_inset Formula 
+\begin{eqnarray}
+L & = & \prod_{i=1}^{n}f\left(\mathbf{x},y_{i}\right)^{c_{i}}\left(S\left(\mathbf{x},y_{i}\right)\right)^{1-c_{i}}
+\end{eqnarray}
+
+\end_inset
+
+Then the log likelihood is 
+\begin_inset Formula 
+\begin{equation}
+l=\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x},y_{i}\right)-\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x},\tau\right)}d\tau
+\end{equation}
+
+\end_inset
+
+which depends not only on 
+\begin_inset Formula $\mu_{i}=e^{\phi\left(\mathbf{x},y_{i}\right)}$
+\end_inset
+
+ but also on 
+\begin_inset Formula $\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x},\tau\right)}d\tau$
+\end_inset
+
+.
+ That's a hard problem.
+ Maybe there is a variational method that could be used, but it's hard to
+ see how this problem could be solved with IRLS, since the likelihood depends
+ on 
+\begin_inset Formula $\phi$
+\end_inset
+
+ and not just on its values at the times 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+.
+ It's easy to take its 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ derivatives.
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial y_{k}}=c_{k}\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)-e^{\phi\left(\mathbf{x},y_{k}\right)}
+\end{equation}
+
+\end_inset
+
+Furthermore, 
+\begin_inset Formula $\frac{\partial y_{k}}{\partial\mu_{k}}=\frac{\partial}{\partial\mu_{k}}\log\left(\mu_{k}\right)=\frac{1}{\mu_{k}}$
+\end_inset
+
+.
+ Then the derivative would be
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{k}} & = & e^{-\phi\left(\mathbf{x},y_{k}\right)}\left(c_{k}\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)-e^{\phi\left(\mathbf{x},y_{k}\right)}\right)\\
+ & = & c_{k}e^{-\phi\left(\mathbf{x},y_{k}\right)}\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)-1\\
+ & = & c_{k}e^{-\phi\left(\mathbf{x},y_{k}\right)}\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)-1
+\end{eqnarray}
+
+\end_inset
+
+or is that just a frightful abuse of notation? I think the units check out.
+ If it works, I have traded an integral of 
+\begin_inset Formula $e^{\phi\left(\mathbf{x},t\right)}$
+\end_inset
+
+ for a derivative of the same, which is a substantial improvement, particularly
+ if 
+\begin_inset Formula $\phi$
+\end_inset
+
+ is a MARS model.
+ The next derivative would be 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\mu_{k}\partial y_{k}}=c_{k}e^{-\phi\left(\mathbf{x},y_{k}\right)}\left(\frac{\partial^{2}\phi}{\partial y_{k}^{2}}\left(\mathbf{x},y_{k}\right)-\left(\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)\right)^{2}\right)
+\end{equation}
+
+\end_inset
+
+and applying the chain rule gives 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\mu_{k}\partial\mu_{k}}=c_{k}e^{-2\phi\left(\mathbf{x},y_{k}\right)}\left(\frac{\partial^{2}\phi}{\partial y_{k}^{2}}\left(\mathbf{x},y_{k}\right)-\left(\frac{\partial\phi}{\partial y_{k}}\left(\mathbf{x},y_{k}\right)\right)^{2}\right)
+\end{equation}
+
+\end_inset
+
+and for off-diagonal elements, 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\mu_{k_{1}}\partial y_{k_{2}}}=0,k_{1}\ne k_{2}
+\end{equation}
+
+\end_inset
+
+Now there is a second derivative of 
+\begin_inset Formula $\phi$
+\end_inset
+
+, which can still be approximated fairly easily in general or calculated
+ exactly for a MARS model.
+ However, my current MARS implementation does not support second derivatives
+ and even smoothed MARS does not have continuous second derivatives.
+ Some types of models won't even have continuous first derivatives, or may
+ not be continuous functions themselved.
+\end_layout
+
+\begin_layout Subsection*
+Conclusion
+\end_layout
+
+\begin_layout Standard
+This general case cannot be solved with IRLS.
+ Could it be solved with GIRLS
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Bissantz2009"
+
+\end_inset
+
+? With sieves
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Geman1982"
+
+\end_inset
+
+? With a variational approach?
+\end_layout
+
+\begin_layout Subsection*
+Well, actually...
+\end_layout
+
+\begin_layout Standard
+I guess what I'm looking for is 
+\begin_inset Formula $\frac{\partial l}{\partial\mu_{k}}$
+\end_inset
+
+ where 
+\begin_inset Formula $\mu_{k}=e^{\phi\left(\mathbf{x},y_{k}\right)}$
+\end_inset
+
+.
+ So let 
+\begin_inset Formula 
+\begin{equation}
+\psi=\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x},\tau\right)}d\tau
+\end{equation}
+
+\end_inset
+
+The derivative is approximately 
+\begin_inset Formula $\frac{\Delta\psi}{\Delta\mu_{k}}$
+\end_inset
+
+ and the change in 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ is because of a change in 
+\begin_inset Formula $\phi\left(\mathbf{x},y_{k}\right)$
+\end_inset
+
+.
+ If I assume that change basically happens 
+\emph on
+at
+\emph default
+ 
+\begin_inset Formula $y_{k}$
+\end_inset
+
+, then could I approximate the derivative as 
+\begin_inset Formula $\frac{\partial\psi}{\mu_{k}}\approx1$
+\end_inset
+
+? Maybe I should run some numerical experiments.
+ Let's run with that idea, though.
+ Even if it's right, is 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ even the thing to optimize over for the 
+\begin_inset Formula $c_{k}=0$
+\end_inset
+
+ cases? Maybe there are two sets of parameters, 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ and its integral! That makes some degree of sense, since there are now
+ twice as many outcome variables.
+ That is, there is 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ in addition to 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+.
+ Okay, so let's treat 
+\begin_inset Formula $\mu_{k}$
+\end_inset
+
+ and 
+\begin_inset Formula $\nu_{k}=\int_{0}^{y_{k}}e^{\phi\left(\mathbf{x},\tau\right)}d\tau$
+\end_inset
+
+ as independent and find the derivatives with respect to each.
+ 
+\begin_inset Formula 
+\begin{equation}
+l\left(\mathbf{\mu},\mathbf{\nu}\right)=\sum_{i=1}^{n}c_{i}\log\left(\mu_{k}\right)-\nu_{k}
+\end{equation}
+
+\end_inset
+
+Then 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{k}} & = & \frac{c_{i}}{\mu_{k}}\\
+\frac{\partial^{2}l}{\partial\mu_{k_{1}}\partial\mu_{k_{2}}} & = & -\frac{c_{i}}{\mu_{k}^{2}}I_{k_{1}=k_{2}}\\
+\frac{\partial l}{\partial\nu_{k}} & = & -1\\
+\frac{\partial^{2}l}{\partial\nu_{k_{1}}\partial\nu_{k_{2}}} & = & 0\\
+\frac{\partial^{2}l}{\partial\nu_{k_{1}}\partial\mu_{k_{2}}} & = & 0\\
+\frac{\partial^{2}l}{\partial\mu_{k_{1}}\partial\nu_{k_{2}}} & = & 0
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+IDK
+\end_layout
+
+\begin_layout Standard
+I'm not really convinced by those derivatives in the non-proportional hazards
+ models, nor do I fully understand when and why IRLS works.
+ Let's try to work it out in general.
+ Let 
+\begin_inset Formula $l$
+\end_inset
+
+ be the loss and 
+\begin_inset Formula $\mu$
+\end_inset
+
+ the link, with 
+\begin_inset Formula $\eta$
+\end_inset
+
+ the linear predictor.
+ The loss function is a function of the data and of 
+\begin_inset Formula $\mu$
+\end_inset
+
+, and I want the root of its first derivative.
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\beta}=0
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula $\beta$
+\end_inset
+
+ is the set of model parameters and 
+\begin_inset Formula $\frac{\partial l}{\partial\beta}$
+\end_inset
+
+ is a function of the data.
+ The usual Newton step is derived by solving 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\beta}+\frac{\partial^{2}l}{\partial\beta^{2}}\Delta\beta^{\left(t\right)}=0
+\end{equation}
+
+\end_inset
+
+and the step is 
+\begin_inset Formula 
+\begin{equation}
+\beta^{\left(t+1\right)}=\beta^{\left(t\right)}+\Delta\beta^{\left(t\right)}.
+\end{equation}
+
+\end_inset
+
+The Hessian can be expanded using the chain rule
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\beta^{2}}=\frac{\partial^{2}l}{\partial\mu^{2}}\left(\frac{\partial\mu}{\partial\eta}\right)^{2}\left(\frac{\partial\eta}{\partial\beta}\right)^{2}
+\end{equation}
+
+\end_inset
+
+and the score function is 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\beta}=\frac{\partial l}{\partial\mu}\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}
+\end{equation}
+
+\end_inset
+
+In Fisher scoring you instead use the expected value of the Hessian, 
+\begin_inset Formula 
+\begin{equation}
+A=-E\left(\frac{\partial^{2}l}{\partial\beta^{2}}\right)
+\end{equation}
+
+\end_inset
+
+so that 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\beta}-A\Delta\beta^{\left(t\right)}=0
+\end{equation}
+
+\end_inset
+
+but whatever.
+ If you only care about exponential families then I guess that makes things
+ simpler somehow, but forget it for now.
+ Anyway, we have
+\begin_inset Formula 
+\begin{eqnarray}
+\beta^{\left(t+1\right)} & = & \beta^{\left(t\right)}+\Delta\beta^{\left(t\right)}\\
+ & =
+\end{eqnarray}
+
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{eqnarray}
+\Delta\beta^{\left(t\right)} & = & -\left(\frac{\partial^{2}l}{\partial\beta^{2}}\right)^{-1}\frac{\partial l}{\partial\beta}\\
+ & = & -\left(\frac{\partial^{2}l}{\partial\mu^{2}}\left(\frac{\partial\mu}{\partial\eta}\right)^{2}\left(\frac{\partial\eta}{\partial\beta}\right)^{2}\right)^{-1}\frac{\partial l}{\partial\mu}\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}\\
+\left(\frac{\partial\eta}{\partial\beta}\right)^{2}\Delta\beta^{\left(t\right)} & = & \left(\frac{\partial^{2}l}{\partial\mu^{2}}\left(\frac{\partial\mu}{\partial\eta}\right)^{2}\right)^{-1}\frac{\partial l}{\partial\mu}\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}\\
+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\frac{\partial\mu}{\partial\eta}\right)^{2}\left(\frac{\partial\eta}{\partial\beta}\right)^{2}\left(\beta^{\left(t+1\right)}-\beta^{\left(t\right)}\right) & = & \frac{\partial l}{\partial\mu}\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}\\
+\left(\frac{\partial\eta}{\partial\beta}\right)^{2}\beta^{\left(t+1\right)} & = & \left(\frac{\partial^{2}l}{\partial\mu^{2}}\left(\frac{\partial\mu}{\partial\eta}\right)^{2}\right)^{-1}\frac{\partial l}{\partial\mu}\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}+\left(\frac{\partial\eta}{\partial\beta}\right)^{2}\beta^{\left(t\right)}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section*
+Ignore that last section
+\end_layout
+
+\begin_layout Standard
+Herein I can finally explain IRLS.
+ I really think I get it now! The following is based closely on the explanation
+ in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Green2011"
+
+\end_inset
+
+.
+ Okay, the goal is to solve 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial l}{\partial\beta}=0
+\end{equation}
+
+\end_inset
+
+and note that 
+\begin_inset Formula $\frac{\partial l}{\partial\beta}=D^{T}u$
+\end_inset
+
+ where 
+\begin_inset Formula $u=\frac{\partial l}{\partial\eta}$
+\end_inset
+
+ and 
+\begin_inset Formula $D=\frac{\partial\eta}{\partial\beta}$
+\end_inset
+
+.
+ So we're solving 
+\begin_inset Formula 
+\begin{equation}
+D^{T}u=0
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $\beta$
+\end_inset
+
+.
+ We use Newton-Raphson, so the step is 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial^{2}l}{\partial\beta^{2}}\beta^{\left(t+1\right)} & = & \frac{\partial^{2}l}{\partial\beta^{2}}\beta^{\left(t\right)}-\frac{\partial l}{\partial\beta}\\
+ & = & \frac{\partial^{2}l}{\partial\beta^{2}}\beta^{\left(t\right)}-D^{T}u\\
+-\frac{\partial^{2}l}{\partial\beta^{2}}\left(\beta^{\left(t+1\right)}-\beta^{\left(t\right)}\right) & = & D^{T}u
+\end{eqnarray}
+
+\end_inset
+
+That is, you obtain 
+\begin_inset Formula $\beta^{\left(t+1\right)}$
+\end_inset
+
+ by solving the above linear system.
+ That's just basic Newton-Raphson.
+ The trick to turning plain old Newton-Raphson into IRLS is to employ a
+ particular approximation, called Fisher scoring.
+ In Fisher scoring, you approximate the negative Hessian 
+\begin_inset Formula $-\frac{\partial^{2}l}{\partial\beta^{2}}$
+\end_inset
+
+ by the Fisher information matrix, which gives 
+\begin_inset Formula 
+\begin{eqnarray}
+-\frac{\partial^{2}l}{\partial\beta^{2}} & \approx & E\left(-\frac{\partial^{2}l}{\partial\beta^{2}}\right)\label{eq:approximation}\\
+ & = & \left(\frac{\partial\eta}{\partial\beta}\right)^{T}E\left(\frac{\partial l}{\partial\eta}\left(\frac{\partial l}{\partial\eta}\right)^{T}\right)\frac{\partial\eta}{\partial\beta}\label{eq:after_approximation}\\
+ & = & D^{T}E\left(\frac{\partial l}{\partial\eta}\left(\frac{\partial l}{\partial\eta}\right)^{T}\right)D
+\end{eqnarray}
+
+\end_inset
+
+where I skipped a few steps between the 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:approximation"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:after_approximation"
+
+\end_inset
+
+ that are shown more thoroughly in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Green2011"
+
+\end_inset
+
+.
+ Substituting this approximation into the equation for the Newton-Raphson
+ step gives 
+\begin_inset Formula 
+\begin{equation}
+D^{T}E\left(\frac{\partial l}{\partial\eta}\left(\frac{\partial l}{\partial\eta}\right)^{T}\right)D\left(\beta^{\left(t+1\right)}-\beta^{\left(t\right)}\right)=D^{T}u
+\end{equation}
+
+\end_inset
+
+If you look at this last system long enough, you see that it is the just
+ the normal equations for a weighted linear regression problem with target
+ 
+\begin_inset Formula 
+\begin{eqnarray}
+z & = & E\left(\frac{\partial l}{\partial\eta}\left(\frac{\partial l}{\partial\eta}\right)^{T}\right)^{-1}u+D\beta,
+\end{eqnarray}
+
+\end_inset
+
+onto 
+\begin_inset Formula $D$
+\end_inset
+
+ with weight matrix 
+\begin_inset Formula 
+\begin{equation}
+W=E\left(\frac{\partial l}{\partial\eta}\left(\frac{\partial l}{\partial\eta}\right)^{T}\right)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Optimizing machine
+\end_layout
+
+\begin_layout Standard
+How can the above discussion be generalized to include models 
+\begin_inset Formula $\eta=h\left(x\right)$
+\end_inset
+
+ where 
+\begin_inset Formula $h$
+\end_inset
+
+ is 
+\emph on
+not
+\emph default
+ parameterized by some fixed dimensional vector 
+\begin_inset Formula $\beta$
+\end_inset
+
+.
+ Let's just think about why IRLS works.
+ It is based on the idea of approximating the loss function by the first
+ few terms of its Taylor series,
+\begin_inset Formula 
+\begin{eqnarray}
+l\left(\mu_{0}+\Delta\mu,y\right) & \approx & l\left(\mu_{0},y\right)+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)\Delta\mu+\frac{1}{2}\Delta\mu^{T}\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu\label{eq:taylor_loss}\\
+ & = & l\left(\mu_{0},y\right)+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)+\frac{1}{2}\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)^{T}\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)
+\end{eqnarray}
+
+\end_inset
+
+and then optimizing this simpler function for 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+.
+ That is, set its derivative to 0,
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu & = & 0\label{eq:unconstrained_case}\\
+-\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu & = & \frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)
+\end{eqnarray}
+
+\end_inset
+
+However, 
+\begin_inset Formula $\Delta\mu$
+\end_inset
+
+ is not unconstrained.
+ In the GLM case, it must be true that 
+\begin_inset Formula 
+\begin{equation}
+g\left(\mu_{0}+\Delta\mu\right)=x\beta
+\end{equation}
+
+\end_inset
+
+for some 
+\begin_inset Formula $\beta$
+\end_inset
+
+, or, slightly more generally, 
+\begin_inset Formula 
+\begin{equation}
+g\left(\mu_{0}+\Delta\mu\right)=h\left(x,\beta\right)
+\end{equation}
+
+\end_inset
+
+so that 
+\begin_inset Formula 
+\begin{equation}
+\Delta\mu=g^{-1}\left(h\left(x,\beta\right)\right)-\mu_{0}
+\end{equation}
+
+\end_inset
+
+Okay, at each step, optimize 
+\begin_inset Formula 
+\begin{equation}
+l\left(\mu^{\left(t\right)}+\Delta\mu^{\left(t\right)},y\right)\approx l\left(\mu^{\left(t\right)},y\right)+\frac{\partial l}{\partial\mu}\left(\mu^{\left(t\right)},y\right)\Delta\mu^{\left(t\right)}+\frac{1}{2}\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\left(\Delta\mu^{\left(t\right)}\right)^{2}
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $\Delta\mu^{\left(t\right)}$
+\end_inset
+
+ to get 
+\begin_inset Formula $\mu^{\left(t+1\right)}=\mu^{\left(t\right)}+\Delta\mu^{\left(t\right)}$
+\end_inset
+
+ under the constraint that 
+\begin_inset Formula $g\left(\mu_{0}+\Delta\mu\right)=h\left(x\right)$
+\end_inset
+
+.
+ This is a generalization of the IRLS in the previous section, which I claim
+ reduces to that IRLS if 
+\begin_inset Formula $h\left(x\right)=h\left(x,\beta\right)$
+\end_inset
+
+.
+ Firstly, assume the existence of some procedure for solving the following
+ problem: find the function 
+\begin_inset Formula $h$
+\end_inset
+
+ minimizing 
+\begin_inset Formula 
+\begin{equation}
+\left(z-\eta\right)^{T}Q\left(z-\eta\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $h$
+\end_inset
+
+ belongs to some space of functions and 
+\begin_inset Formula $\eta=h\left(x\right)$
+\end_inset
+
+.
+ If 
+\begin_inset Formula $h\left(x\right)=x\beta$
+\end_inset
+
+ then this is just generalized least squares.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Comment
+status open
+
+\begin_layout Plain Layout
+for some 
+\begin_inset Formula $\beta$
+\end_inset
+
+, or, 
+\begin_inset Formula 
+\begin{equation}
+g\left(\mu\right)=\eta
+\end{equation}
+
+\end_inset
+
+so that 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial\Delta\mu}{\partial\beta} & = & \frac{\partial g^{-1}}{\partial\eta}\frac{\partial\eta}{\partial\beta}\\
+ & = & \frac{\partial\eta}{\partial\mu}\frac{\partial\eta}{\partial\beta}
+\end{eqnarray}
+
+\end_inset
+
+Okay, so 
+\begin_inset Formula 
+\begin{equation}
+\Delta\mu=g^{-1}\left(h\left(x,\beta\right)\right)-\mu_{0}
+\end{equation}
+
+\end_inset
+
+Let's sub that last into 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:taylor_loss"
+
+\end_inset
+
+.
+ Then 
+\begin_inset Formula 
+\begin{equation}
+l\left(\mu_{0}+\Delta\mu,y\right)\approx l\left(\mu_{0},y\right)+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)\Delta\mu+\frac{1}{2}\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu^{2}
+\end{equation}
+
+\end_inset
+
+Then instead of 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:unconstrained_case"
+
+\end_inset
+
+, the form of the solution becomes 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)\frac{\partial\Delta\mu}{\partial\beta}+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu\frac{\partial\Delta\mu}{\partial\beta} & = & 0\\
+\frac{\partial\Delta\mu}{\partial\beta}\left(\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\Delta\mu\right) & = & 0\\
+\frac{\partial\mu}{\partial\beta}\left(\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)+\frac{\partial^{2}l}{\partial^{2}\mu^{2}}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)\right) & = & 0\\
+\frac{\partial\mu}{\partial\eta}\frac{\partial\eta}{\partial\beta}\left(\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)\right) & = & 0\\
+\frac{\partial\mu}{\partial\eta}D\left(\frac{\partial l}{\partial\mu}\left(\mu_{0},y\right)+\frac{\partial^{2}l}{\partial\mu^{2}}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right)\right) & = & 0\\
+\frac{\partial l}{\partial\beta}+\frac{\partial^{2}l}{\partial\beta\partial\mu}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right) & = & 0
+\end{eqnarray}
+
+\end_inset
+
+Assuming that 
+\begin_inset Formula $ $
+\end_inset
+
+
+\begin_inset Formula $h$
+\end_inset
+
+ can be inverted, 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\beta}+\frac{\partial^{2}l}{\partial\beta\partial\mu}\left(\mu_{0},y\right)\left(\mu^{\left(t+1\right)}-\mu^{\left(t\right)}\right) & = & 0\\
+\frac{\partial l}{\partial\beta}+\frac{\partial^{2}l}{\partial\beta\partial\mu}\left(\mu_{0},y\right)\left(g^{-1}\left(h\left(x,\beta^{\left(t+1\right)}\right)\right)-g^{-1}\left(h\left(x,\beta^{\left(t\right)}\right)\right)\right) & = & 0
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 \begin_inset CommandInset bibtex
 LatexCommand bibtex
