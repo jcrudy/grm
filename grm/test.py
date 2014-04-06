@@ -1,9 +1,9 @@
 import numpy
-from grm import GeneralizedRegressor, BinomialLoss, LogitLink, LinearRegressor
+from grm import GeneralizedRegressor, BinomialLossFunction, LogitLink, LinearRegressor
 import scipy.stats
 from pyearth.earth import Earth
 
-
+numpy.seterr(all='raise')
 m = 1000
 n = 10
 class GeneralizedRegressorTester(object):
@@ -14,28 +14,14 @@ class GeneralizedRegressorTester(object):
         assert self.assertion(model)
 
     def test_binomial(self):
-        model = GeneralizedRegressor(base_regressor=self.base_regressor(), loss_function=BinomialLoss(1), link_function=LogitLink(1))
+        model = GeneralizedRegressor(base_regressor=self.base_regressor(),
+                                     loss_function=BinomialLossFunction(LogitLink()))
+        n = numpy.random.randint(1, 10, size=m)
         mu = 1.0 / (1.0 + numpy.exp(-self.eta))
-        y = numpy.random.binomial(1, mu)
-        model.fit(self.X, y)
+        y = numpy.random.binomial(n, mu)
+        model.fit(self.X, y, n=n)
         assert self.assertion(model)
-        
-#     def test_proportional_hazards(self):
-#         model = GeneralizedRegressor(base_regressor=self.base_regressor(), loss_function=ProportionalHazardsLoss(), link_function=ExpLink())
-#         mu = numpy.exp(self.eta)
-#         
-#         # Generate event times (time until event / death / failure)
-#         T = numpy.random.exponential(mu, size=m)
-#         
-#         # Generate observation times (time until censoring)
-#         obs = numpy.random.uniform(0., 365.25, size=m)
-#         
-#         # Calculate time and censor status.  c=1 indicates event, c=0 indicates right censor
-#         c = 1.0 * (T <= obs)
-#         y = numpy.minimum(T, obs)
-#         model.fit(self.X, y, event=c)
-        
-        
+
     def assertion(self, model):
         return scipy.stats.pearsonr(model.predict(self.X), self.eta) > .99
 
@@ -56,7 +42,7 @@ def earth_basis(X, vars, parents, knots, signs):
         knot = numpy.sort(X[:,vars[i]])[knots[i]]
         B[:,i+1] = B[:,parents[i]] * numpy.maximum(signs[i]*(X[:,vars[i]] - knot), 0.0)
     return B
-        
+
 class TestGeneralizedEarthRegressor(GeneralizedRegressorTester):
     base_regressor = Earth
     def __init__(self):
