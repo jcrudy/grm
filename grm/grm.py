@@ -1,5 +1,6 @@
 from sklearn.base import BaseEstimator, RegressorMixin, clone
 import numpy
+import scipy.stats as stats
 from abc import ABCMeta, abstractmethod
 
 class LinearRegressor(BaseEstimator, RegressorMixin):
@@ -58,6 +59,10 @@ class LossFunction(object):
     def starting_point(self, X, y, base_regressor, loss_function, **kwargs):
         pass
 
+    @abstractmethod
+    def alter_arguments(self, X, y, kwargs):
+        pass
+
 class LinkableLossFunction(LossFunction):
     def __init__(self, link_function):
         self.link_function = link_function
@@ -69,6 +74,9 @@ class LinkableLossFunction(LossFunction):
     def inverse_predict(self, mu, **kwargs):
         link_params = self.link_function.get_params(kwargs)
         return self.link_function.eval(mu, **link_params)
+
+    def alter_arguments(self, X, y, kwargs):
+        return X, y, kwargs
 
 class IndependentLinkableLossFunction(LinkableLossFunction):
 
@@ -144,6 +152,45 @@ class BinomialLossFunction(IndependentLinkableLossFunction):
         mean = numpy.mean(y / n)
         return self.starting_point_factor * mean + \
                (1.0 - self.starting_point_factor) * y / n
+
+class LogHazardLossFunction(LossFunction):
+    def get_params(self, kwargs):
+        return {'c': kwargs['c'],
+                'N': kwargs['N'],
+                'nu': kwargs['nu'],
+                'rank': kwargs['rank']}
+
+    def alter_arguments(self, X, y, kwargs):
+        # Compute sort-based extra arguments
+        m = y.shape[0]
+        order = numpy.argsort(y)
+        rank = stats.rankdata(y).astype(int) - 1
+        N = m - rank
+        nu = y
+        nu[rank > 0] -= y[order][rank[rank > 0] - 1]
+        kwargs = kwargs.copy()
+        kwargs['rank'] = rank
+        kwargs['nu'] = nu
+        kwargs['N'] = N
+        return numpy.c_[X, y], y, kwargs
+
+    def eval(self, mu, y, c, N, nu, rank):
+        return -numpy.sum(c * mu) + numpy.sum(nu * numpy.exp(mu) * N)
+
+    def predict(self, eta, c, N, nu, rank):
+        return eta
+
+    def inverse_predcit(self, mu, c, N, nu, rank):
+        return mu
+
+    def starting_point(self, X, y, base_regressor, loss_function,
+                       c, N, nu, rank):
+        return numpy.log(c / (nu * N))
+
+    def step(self, mu, y, c, N, nu, rank):
+        w = 0.5 * nu * numpy.exp(mu) * N
+        z = mu + (0.5 * c / w) - 1.0
+        return z, w
 
 # class ExponentialFamilyLossFunction(LinkableLossFunction):
 #     @abstractmethod
@@ -300,6 +347,9 @@ class GeneralizedRegressor(BaseEstimator):
         self.convergence_test = convergence_test
 
     def fit(self, X, y, **kwargs):
+        # Alter arguments if necessary
+        X, y, kwargs = self.loss_function.alter_arguments(X, y, kwargs)
+
         # Initialize mu, eta, and loss before first iteration
         mu = self.loss_function.starting_point(X, y, self.base_regressor,
                                                self.loss_function, **kwargs)

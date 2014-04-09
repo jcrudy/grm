@@ -22,6 +22,25 @@ class GeneralizedRegressorTester(object):
         model.fit(self.X, y, n=n)
         assert self.assertion(model)
 
+    def test_log_hazard(self):
+        # Firstly, assume the last column of X is time
+        y = self.X[-1,:]
+        X = self.X[:-1,:]
+
+        # Censor some of the times in a non-informative manner
+        censor_times = numpy.random.uniform(y.min(), y.max(), size=y.shape[0])
+        c = 1.0 * (y < censor_times)
+        y = numpy.minimum(y, censor_times)
+
+        # Fit the model
+        model = GeneralizedRegressor(base_regressor=self.base_regressor(),
+                                     loss_function=LogHazardLossFunction())
+        model.fit(X, y, c=c)
+
+        # Make sure it totally worked
+        
+
+
     def assertion(self, model):
         return scipy.stats.pearsonr(model.predict(self.X), self.eta) > .99
 

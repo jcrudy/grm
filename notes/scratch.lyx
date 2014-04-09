@@ -719,6 +719,368 @@ z_{i} & = & \eta_{i}+\left(\frac{n_{i}\mu_{i}\left(1-\mu_{i}\right)}{\mu_{i}^{2}
 
 \end_layout
 
+\begin_layout Section*
+Hazard function
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula 
+\begin{eqnarray}
+h\left(\mathbf{x}_{i},t\right) & = & e^{\phi\left(\mathbf{x}_{i},t\right)}
+\end{eqnarray}
+
+\end_inset
+
+be the hazard function for some counting process, where 
+\begin_inset Formula $\phi$
+\end_inset
+
+ is the function represented by the inner regressor.
+ Let 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ be the times and 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ be the censorship status, where 
+\begin_inset Formula $\mathbf{c}_{i}=0$
+\end_inset
+
+ indicates censorship.
+ The likelihood function is
+\begin_inset Formula 
+\begin{equation}
+L=\prod_{i=1}^{n}f\left(\mathbf{x},y_{i}\right)^{c_{i}}\left(S\left(\mathbf{x},y_{i}\right)\right)^{1-c_{i}}
+\end{equation}
+
+\end_inset
+
+where
+\begin_inset Formula 
+\begin{equation}
+f\left(\mathbf{x},t\right)=S\left(\mathbf{x},t\right)h\left(\mathbf{x},t\right)
+\end{equation}
+
+\end_inset
+
+and
+\begin_inset Formula 
+\begin{equation}
+F\left(\mathbf{x},t\right)=1-S\left(\mathbf{x},t\right)
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{equation}
+S\left(\mathbf{x},t\right)=e^{-H\left(\mathbf{x},t\right)}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{equation}
+H\left(\mathbf{x},t\right)=\int_{0}^{t}h\left(\mathbf{x},\tau\right)d\tau
+\end{equation}
+
+\end_inset
+
+The log likelihood is 
+\begin_inset Formula 
+\begin{equation}
+l=\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x},y_{i}\right)-\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x},\tau\right)}d\tau
+\end{equation}
+
+\end_inset
+
+Let's approximate the integral using some rule such that
+\begin_inset Formula 
+\begin{eqnarray}
+\int_{0}^{t}e^{\phi\left(\mathbf{x},\tau\right)}d\tau & = & \sum_{i=1}^{p}b_{i}\\
+b_{i} & = & g\left(t_{\left(i-1\right)},t_{\left(i\right)},e^{\phi\left(\mathbf{x}_{\left(i\right)},t_{\left(i\right)}\right)}\right)
+\end{eqnarray}
+
+\end_inset
+
+for some 
+\begin_inset Formula $g$
+\end_inset
+
+, where 
+\begin_inset Formula $p$
+\end_inset
+
+ is the total number of sample points with time less than 
+\begin_inset Formula $t$
+\end_inset
+
+.
+ Then
+\begin_inset Formula 
+\begin{equation}
+l=\sum_{i=1}^{n}c_{i}\mu_{i}-\sum_{i=1}^{n-1}b_{i}
+\end{equation}
+
+\end_inset
+
+The derivatives are 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{i}} & = & c_{i}-\frac{\partial b_{i}}{\partial\mu_{i}}\\
+\frac{\partial^{2}l}{\partial\mu_{i}\partial\mu_{j}} & = & -\frac{\partial^{2}b_{i}}{\partial\mu_{i}\partial\mu_{j}}
+\end{eqnarray}
+
+\end_inset
+
+If 
+\begin_inset Formula $g$
+\end_inset
+
+ is the usual rectangle rule, then 
+\begin_inset Formula 
+\begin{equation}
+g\left(t_{\left(i-1\right)},t_{\left(i\right)},e^{\phi\left(\mathbf{x}_{\left(i\right)},t_{\left(i\right)}\right)}\right)=\left(t_{\left(i\right)}-t_{\left(i-1\right)}\right)e^{\phi\left(\mathbf{x}_{\left(i\right)},t_{\left(i\right)}\right)}
+\end{equation}
+
+\end_inset
+
+So the new approximate loss function is 
+\begin_inset Formula 
+\begin{equation}
+l=\left(\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)\right)-\sum_{i=1}^{p}\left(t_{\left(i\right)}-t_{\left(i-1\right)}\right)e^{\phi\left(\mathbf{x}_{\left(i\right)},t_{\left(i\right)}\right)}
+\end{equation}
+
+\end_inset
+
+and the observed information matrix will be diagonal! Is it fair to treat
+ the integral this way? Intuitively, it means that areas of higher hazard
+ will have higher precision in the integral approximation, which seems reasonabl
+e.
+ It also means that areas of higher censorship will have higher resolution,
+ which is less good but okay I guess.
+ Note that I used a rectangle rule instead of a trapezoid rule in order
+ to avoid having to deal with 
+\begin_inset Formula $t=0$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section*
+Hazard function more clearly, concisely, and correctly
+\end_layout
+
+\begin_layout Standard
+The goal is to fit a log hazard function
+\begin_inset Formula 
+\begin{equation}
+\log\left(h\left(\mathbf{X},\mathbf{t}\right)\right)=\mathbf{\eta}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{\eta}=\phi\left(\mathbf{X},\mathbf{t}\right)$
+\end_inset
+
+ is the prediction of the inner regressor and 
+\begin_inset Formula $\mathbf{t}$
+\end_inset
+
+ is time since baseline.
+ The above model leads to the following loss function
+\begin_inset Formula 
+\begin{equation}
+l=-\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x}_{i},\tau\right)}d\tau\right)
+\end{equation}
+
+\end_inset
+
+which is the negative of the log likelihood function.
+ Here 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ is the censorship type (
+\begin_inset Formula $c_{i}=1$
+\end_inset
+
+ indicates event/failure/death) and 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ is the time.
+ Let 
+\begin_inset Formula $y_{\left(i\right)}$
+\end_inset
+
+ be the 
+\begin_inset Formula $i^{th}$
+\end_inset
+
+ order statistic of 
+\begin_inset Formula $\mathbf{y}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{x}_{i}$
+\end_inset
+
+ the associated predictors and so on.
+ Using the rectangle method, approximate the integral in the loss function
+ by 
+\begin_inset Formula 
+\begin{eqnarray}
+\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x}_{i},\tau\right)}d\tau & = & \sum_{j=1}^{n}I_{\left(j\right)\le\left\langle i\right\rangle }\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\phi\left(\mathbf{x}_{\left(j\right)},y_{\left(j\right)}\right)}\\
+ & = & \sum_{j=1}^{n}I_{\left(j\right)\le\left\langle i\right\rangle }\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\eta_{\left(j\right)}}\\
+ & = & \sum_{j=1}^{n}I_{y_{\left(j\right)}\le y_{i}}\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\eta_{\left(j\right)}}
+\end{eqnarray}
+
+\end_inset
+
+where I've used 
+\begin_inset Formula $\left\langle i\right\rangle $
+\end_inset
+
+ to indicate the rank of 
+\begin_inset Formula $i$
+\end_inset
+
+.
+ (Basically, 
+\begin_inset Formula $\left\langle \right\rangle $
+\end_inset
+
+ is the inverse of 
+\begin_inset Formula $\left(\right)$
+\end_inset
+
+, so that 
+\begin_inset Formula $i=\left\langle \left(i\right)\right\rangle =\left(\left\langle i\right\rangle \right)$
+\end_inset
+
+.
+ I hope that makes sense.
+ I'm just switching between the original order and rank-based order.) The
+ approximated loss function becomes
+\begin_inset Formula 
+\begin{eqnarray}
+l & = & -\sum_{i=1}^{n}\left(c_{i}\eta_{i}-\sum_{j=1}^{n}I_{y_{\left(j\right)}\le y_{i}}\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\eta_{\left(j\right)}}\right)\\
+ & = & -\sum_{i=1}^{n}\left(c_{i}\mu_{i}-\sum_{j=1}^{n}I_{y_{\left(j\right)}\le y_{i}}\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\mu_{\left(j\right)}}\right)
+\end{eqnarray}
+
+\end_inset
+
+Let 
+\begin_inset Formula $\upsilon_{i}=y_{i}-y_{\left(\left\langle i\right\rangle -1\right)}$
+\end_inset
+
+.
+ Then 
+\begin_inset Formula 
+\begin{eqnarray}
+l & = & -\sum_{i=1}^{n}\left(c_{i}\mu_{i}-\sum_{j=1}^{n}I_{y_{j}\le y_{i}}\nu_{j}e^{\mu_{j}}\right)\\
+ & = & -\sum_{i=1}^{n}c_{i}\mu_{i}+\sum_{i=1}^{n}\sum_{j=1}^{n}I_{y_{j}\le y_{i}}\nu_{j}e^{\mu_{j}}\\
+ & = & -\sum_{i=1}^{n}c_{i}\mu_{i}+\sum_{j=1}^{n}\nu_{j}e^{\mu_{j}}\sum_{i=1}^{n}I_{y_{j}\le y_{i}}\\
+ & = & -\sum_{i=1}^{n}c_{i}\mu_{i}+\sum_{j=1}^{n}\nu_{j}e^{\mu_{j}}N_{j}
+\end{eqnarray}
+
+\end_inset
+
+The score function is 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{k}} & = & -\sum_{i=1}^{n}\left(c_{i}\delta_{ik}-\sum_{j=1}^{n}I_{y_{\left(j\right)}\le y_{i}}\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\mu_{\left(j\right)}}\delta_{\left(j\right)k}\right)\\
+ & = & -c_{k}+\sum_{i=1}^{n}\sum_{j=1}^{n}\delta_{\left(j\right)k}I_{y_{\left(j\right)}\le y_{i}}\left(y_{\left(j\right)}-y_{\left(j-1\right)}\right)e^{\mu_{\left(j\right)}}\\
+ & = & -c_{k}+\sum_{i=1}^{n}I_{y_{k}\le y_{i}}\left(y_{k}-y_{\left(\left\langle k\right\rangle -1\right)}\right)e^{\mu_{k}}\\
+ & = & -c_{k}+\sum_{i=1}^{n}I_{y_{k}\le y_{i}}\nu_{k}e^{\mu_{k}}\\
+ & = & -c_{k}+\nu_{k}e^{\mu_{k}}\sum_{i=1}^{n}I_{y_{k}\le y_{i}}
+\end{eqnarray}
+
+\end_inset
+
+and the observed information matrix is diagonal and is given by 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial^{2}l}{\partial\mu_{k}\partial\mu_{k}} & = & \sum_{i=1}^{n}I_{y_{k}\le y_{i}}\nu_{k}e^{\mu_{k}}\\
+ & = & \nu_{k}e^{\mu_{k}}\sum_{i=1}^{n}I_{y_{k}\le y_{i}}
+\end{eqnarray}
+
+\end_inset
+
+Obviously the approximation of the integral is very convenient.
+ Note that 
+\begin_inset Formula $\sum_{i=1}^{n}I_{y_{k}\le y_{i}}$
+\end_inset
+
+ is just the number of 
+\begin_inset Formula $y_{i}$
+\end_inset
+
+ in the sample that are greater than 
+\begin_inset Formula $y_{k}$
+\end_inset
+
+.
+ Let's call it 
+\begin_inset Formula 
+\begin{equation}
+N_{k}=\sum_{i=1}^{n}I_{y_{k}\le y_{i}}
+\end{equation}
+
+\end_inset
+
+So that 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{k}} & = & \nu_{k}e^{\mu_{k}}N_{k}-c_{k}\\
+\frac{\partial^{2}l}{\partial\mu_{k}\partial\mu_{k}} & = & \nu_{k}e^{\mu_{k}}N_{k}
+\end{eqnarray}
+
+\end_inset
+
+Note that 
+\begin_inset Formula $\nu_{k}>0$
+\end_inset
+
+ and 
+\begin_inset Formula $N_{k}>0$
+\end_inset
+
+ for all 
+\begin_inset Formula $k$
+\end_inset
+
+, so the loss function is appropriately convex (or concave, if you like).
+ Then 
+\begin_inset Formula 
+\begin{eqnarray}
+Q_{kk} & = & \frac{1}{2}\nu_{k}e^{\mu_{k}}N_{k}\\
+z_{k} & = & \mathbf{\eta}_{k}-\frac{1}{\nu_{k}N_{k}}e^{-\mu_{k}}\left(\nu_{k}e^{\mu_{k}}N_{k}-c_{k}\right)\\
+ & = & \eta_{k}+\frac{c_{k}}{\nu_{k}N_{k}}e^{-\mu_{k}}-1
+\end{eqnarray}
+
+\end_inset
+
+For a starting point, the unconstrained solution is 
+\begin_inset Formula 
+\begin{eqnarray}
+0 & = & \frac{\partial l}{\partial\mu_{k}}\\
+ & = & \nu_{k}e^{\mu_{k}}N_{k}-c_{k}\\
+c_{i} & = & \nu_{k}e^{\mu_{k}}N_{k}\\
+\log\left(\frac{c_{k}}{\nu_{k}N_{k}}\right) & = & \mu_{k}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 \begin_inset CommandInset bibtex
 LatexCommand bibtex
