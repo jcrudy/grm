@@ -60,7 +60,7 @@ class LossFunction(object):
         pass
 
     @abstractmethod
-    def alter_arguments(self, X, y, kwargs):
+    def alter_arguments(self, X, y=None, **kwargs):
         pass
 
 class LinkableLossFunction(LossFunction):
@@ -75,7 +75,7 @@ class LinkableLossFunction(LossFunction):
         link_params = self.link_function.get_params(kwargs)
         return self.link_function.eval(mu, **link_params)
 
-    def alter_arguments(self, X, y, kwargs):
+    def alter_arguments(self, X, y=None, **kwargs):
         return X, y, kwargs
 
 class IndependentLinkableLossFunction(LinkableLossFunction):
@@ -160,32 +160,41 @@ class LogHazardLossFunction(LossFunction):
                 'nu': kwargs['nu'],
                 'rank': kwargs['rank']}
 
-    def alter_arguments(self, X, y, kwargs):
+    def alter_arguments(self, X, y=None, **kwargs):
+        kwargs = kwargs.copy()
+        
+        # Check for time
+        if y is None and 't' in kwargs:
+            y = kwargs['t']
+            del kwargs['t']
+            
         # Compute sort-based extra arguments
         m = y.shape[0]
         order = numpy.argsort(y)
         rank = stats.rankdata(y).astype(int) - 1
         N = m - rank
-        nu = y
+        nu = y.copy()
         nu[rank > 0] -= y[order][rank[rank > 0] - 1]
-        kwargs = kwargs.copy()
         kwargs['rank'] = rank
         kwargs['nu'] = nu
         kwargs['N'] = N
-        return numpy.c_[X, y], y, kwargs
+        if X is not None:
+            return numpy.c_[X, y], y, kwargs
+        else:
+            return y, y, kwargs
 
     def eval(self, mu, y, c, N, nu, rank):
         return -numpy.sum(c * mu) + numpy.sum(nu * numpy.exp(mu) * N)
 
-    def predict(self, eta, c, N, nu, rank):
+    def predict(self, eta, N, nu, rank, c=None):
         return eta
 
-    def inverse_predcit(self, mu, c, N, nu, rank):
+    def inverse_predict(self, mu, c, N, nu, rank):
         return mu
 
     def starting_point(self, X, y, base_regressor, loss_function,
                        c, N, nu, rank):
-        return numpy.log(c / (nu * N))
+        return numpy.log((0.9 * (c==1) + 0.1 * (c==0)) / (nu * N))
 
     def step(self, mu, y, c, N, nu, rank):
         w = 0.5 * nu * numpy.exp(mu) * N
@@ -348,7 +357,7 @@ class GeneralizedRegressor(BaseEstimator):
 
     def fit(self, X, y, **kwargs):
         # Alter arguments if necessary
-        X, y, kwargs = self.loss_function.alter_arguments(X, y, kwargs)
+        X, y, kwargs = self.loss_function.alter_arguments(X, y, **kwargs)
 
         # Initialize mu, eta, and loss before first iteration
         mu = self.loss_function.starting_point(X, y, self.base_regressor,
@@ -401,6 +410,10 @@ class GeneralizedRegressor(BaseEstimator):
         return self
 
     def predict(self, X, **kwargs):
+        
+        # Alter arguments if necessary
+        X, _, kwargs = self.loss_function.alter_arguments(X, None, **kwargs)
+        
         # Predict from the inner regressor
         eta = self.regressor_.predict(X)
 
