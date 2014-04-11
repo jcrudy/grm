@@ -25,13 +25,13 @@ from statsmodels.distributions import ECDF
 # Plot a histogram of failure times from this hazard function
 pyplot.hist(failure_times, bins=50)
 pyplot.title('Uncensored Failure Times')
-pyplot.savefig('uncensored_hist.png')
+pyplot.savefig('uncensored_hist.png', transparent=True)
 pyplot.show()
 
 # Plot a histogram of censored failure times from this hazard function
 pyplot.hist(y, bins=50)
 pyplot.title('Non-informatively Right Censored Failure Times')
-pyplot.savefig('censored_hist.png')
+pyplot.savefig('censored_hist.png', transparent=True)
 pyplot.show()
 
 # Plot the empirical survival function (based on the censored sample) against the actual survival function
@@ -45,7 +45,7 @@ pyplot.plot(t, S_hat, 'b--', lw=3, label='Sampled survival function (1 - ECDF)')
 pyplot.legend()
 pyplot.xlabel('Time')
 pyplot.ylabel('Proportion Still Alive')
-pyplot.savefig('survival_comp.png')
+pyplot.savefig('survival_comp.png', transparent=True)
 pyplot.show()
 
 
