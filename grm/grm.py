@@ -194,7 +194,7 @@ class LogHazardLossFunction(LossFunction):
 
     def starting_point(self, X, y, base_regressor, loss_function,
                        c, N, nu, rank):
-        return numpy.log((0.9 * (c==1) + 0.1 * (c==0)) / (nu * N))
+        return numpy.log((0.9 * (c==1) + 0.1 * (c==0)) / numpy.maximum(0.0000001, nu * N))
 
     def step(self, mu, y, c, N, nu, rank):
         w = 0.5 * nu * numpy.exp(mu) * N

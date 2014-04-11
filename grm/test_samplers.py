@@ -27,7 +27,7 @@ class TestHazardSampler(object):
         exponential distribution.
         '''
         hazard = lambda t: 1.0
-        sampler = HazardSampler(hazard, 1.0, 1.0)
+        sampler = HazardSampler(hazard)
 
         for _ in range(self.test_size):
             u = numpy.random.uniform()
