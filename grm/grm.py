@@ -53,11 +53,11 @@ class LossFunction(object):
         pass
 
     @abstractmethod
-    def alter_fitting_arguments(self, X, y=None, **kwargs):
+    def alter_fitting_arguments(self, X, y, **kwargs):
         pass
     
     @abstractmethod
-    def alter_prediction_arguments(self, X, y=None, **kwargs):
+    def alter_prediction_arguments(self, X, **kwargs):
         pass
 
 class LinkableLossFunction(LossFunction):
@@ -79,10 +79,10 @@ class LinkableLossFunction(LossFunction):
         link_params = self.link_function.get_params(kwargs)
         return self.link_function.eval(mu, **link_params)
 
-    def alter_fitting_arguments(self, X, y=None, **kwargs):
+    def alter_fitting_arguments(self, X, y, **kwargs):
         return X, y, kwargs
     
-    def alter_prediction_arguments(self, X, y=None, **kwargs):
+    def alter_prediction_arguments(self, X, **kwargs):
         return X, y, kwargs
 
 
@@ -192,28 +192,26 @@ class LogHazardLossFunction(LossFunction):
             idx += num + 1
         return X_, y_, c_, iota, omega
         
-    def alter_fitting_arguments(self, X, y, **kwargs):
-        X_, y_, c_, iota, omega = self._X_y_c_iota_omega(X, y, kwargs['c'])
+    def alter_fitting_arguments(self, X, y, c):
+        X_, y_, c_, iota, omega = self._X_y_c_iota_omega(X, y, c)
         b = self._b(iota, omega, y_)
-        kwargs = kwargs.copy()
-        kwargs['b'] = b
-        kwargs['c'] = c_
+        kwargs = {'b': b, 'c': c_}
         if X is not None:
             return numpy.c_[X_, y], y_, kwargs
         else:
             return y_, y_, kwargs
     
-    def alter_prediction_arguments(self, X, **kwargs):
-        if 't' in kwargs:
-            y = kwargs['t']
-        elif 'y' in kwargs:
-            y = kwargs['y']
+    def alter_prediction_arguments(self, X, y=None, t=None):
+        if t is not None:
+            y = t
+        elif y is not None:
+            raise ValueError('Must provide t or y, but not both.')
         else:
             raise ValueError('Must provide times for log hazard prediction (t or y argument)')
         if X is not None:
-            return numpy.c_[X, y], y, kwargs
+            return numpy.c_[X, y], {}
         else:
-            return y, y, kwargs
+            return y, {}
 
     def predict(self, eta, b=None, c=None):
         return eta
@@ -500,7 +498,7 @@ class GeneralizedRegressor(BaseEstimator):
     def predict(self, X, **kwargs):
         
         # Alter arguments if necessary
-        X, _, kwargs = self.loss_function.alter_prediction_arguments(X, None, **kwargs)
+        X, kwargs = self.loss_function.alter_prediction_arguments(X, **kwargs)
         
         # Predict from the inner regressor
         eta = self.regressor_.predict(X)

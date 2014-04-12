@@ -15,7 +15,7 @@ if os.path.exists(data_filename) and not redo:
     with open(data_filename, 'r') as infile:
         m, y, c, censor_times, failure_times = pickle.load(infile)
 else:
-    m = 100000
+    m = 1000
     censor_times = numpy.random.uniform(0.0, 100.0, size=m)
     baseline_hazard = lambda t: numpy.exp(numpy.sin(t) - 2.0)
     sampler = HazardSampler(baseline_hazard, 10.0, 20.0)
