@@ -1,12 +1,13 @@
 import numpy
-from grm import GeneralizedRegressor, LogHazardLossFunction
+from grm import GeneralizedRegressor, MidpointLogHazardLossFunction
 from samplers import HazardSampler
 from matplotlib import pyplot
 import scipy.stats
 from pyearth.earth import Earth
 import pickle
 import os
-
+numpy.seterr(all='raise')
+numpy.random.seed(1)
 
 data_filename = 'log_hazard_data.pickle'
 redo = False
@@ -14,7 +15,6 @@ if os.path.exists(data_filename) and not redo:
     with open(data_filename, 'r') as infile:
         m, y, c, censor_times, failure_times = pickle.load(infile)
 else:
-    numpy.random.seed(1)
     m = 100000
     censor_times = numpy.random.uniform(0.0, 100.0, size=m)
     baseline_hazard = lambda t: numpy.exp(numpy.sin(t) - 2.0)
@@ -26,7 +26,7 @@ else:
         pickle.dump((m, y, c, censor_times, failure_times), outfile)
 pyplot.hist(failure_times, bins=50)
 pyplot.show()
-model = GeneralizedRegressor(base_regressor=Earth(penalty=0.0, allow_linear=False, max_degree=2), loss_function=LogHazardLossFunction())
+model = GeneralizedRegressor(base_regressor=Earth(penalty=0.0, allow_linear=False, max_degree=2), loss_function=MidpointLogHazardLossFunction())
 model.fit(X=None,y=y,c=c)
 t = numpy.arange(0.0, 20.0, .1)
 predicted_log_hazard = model.predict(X=None, t=t)

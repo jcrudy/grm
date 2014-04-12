@@ -1081,6 +1081,252 @@ c_{i} & = & \nu_{k}e^{\mu_{k}}N_{k}\\
 
 \end_layout
 
+\begin_layout Section*
+Other approximations of the integral (the last one was wrong)
+\end_layout
+
+\begin_layout Standard
+I chose the rectangle rule that I did above because it allowed me to avoid
+ computing the predicted log hazard at any new points.
+ However, what I did isn't entirely legitimate.
+ Specifically, I ignored the fact that 
+\begin_inset Formula $\mathbf{x}_{i}\ne\mathbf{x}_{j}$
+\end_inset
+
+ for general 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+.
+ I think that's pretty unforgiveable.
+ I need a better way to approximate the integral, and I think the only solution
+ must be to create additional 
+\begin_inset Quotes eld
+\end_inset
+
+phantom
+\begin_inset Quotes erd
+\end_inset
+
+ sample points representing points at which the inner regressor is evaluated
+ to approximate the integral.
+ Obviously there is a drawback to this method: what was a 1000 sample problem
+ could easily become a 100000 or 1000000 sample problem, which takes way
+ more time and memory.
+ However, let's pursue this avenue for now and see where it leads.
+\end_layout
+
+\begin_layout Standard
+Instead of what I said before, let's approximate the integral as 
+\begin_inset Formula 
+\begin{equation}
+\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x}_{i},\tau\right)}d\tau=\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\phi\left(\mathbf{x},\iota y_{i}/\omega\right)}
+\end{equation}
+
+\end_inset
+
+for some 
+\begin_inset Formula $b$
+\end_inset
+
+, where 
+\begin_inset Formula $\omega$
+\end_inset
+
+ is the number of points we're using to approximate the integral.
+ This formulation covers the rectangle, trapezoid, and Simpson's rules.
+ Probably others as well.
+ The loss function was
+\begin_inset Formula 
+\begin{equation}
+l=-\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\int_{0}^{y_{i}}e^{\phi\left(\mathbf{x}_{i},\tau\right)}d\tau\right)
+\end{equation}
+
+\end_inset
+
+so with this approximation it's 
+\begin_inset Formula 
+\begin{eqnarray}
+l & \approx & -\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega\right)}\right)\\
+ & = & -\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega\right)}\\
+ & = & -\sum_{i=1}^{n}c_{i}\mu_{\Upsilon_{i\omega}}+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}
+\end{eqnarray}
+
+\end_inset
+
+Note that there are now 
+\begin_inset Formula $n\left(\omega+1\right)$
+\end_inset
+
+ points at which the inner regressor must be fit and evaluated.
+ Okay, that's fine I guess.
+ It still fits within the framework.
+ We still have 
+\begin_inset Formula $\mu_{i}=\eta_{i}=\phi\left(\mathbf{x}_{i},y_{i}\right)$
+\end_inset
+
+.
+ However, now there is also 
+\begin_inset Formula $\mu_{n+\Upsilon_{i\iota}}=\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega\right)$
+\end_inset
+
+ where I've defined 
+\begin_inset Formula $\Upsilon_{i\iota}$
+\end_inset
+
+ as the convenient indexing function that will keep everything organized
+ somehow.
+ But remember that 
+\begin_inset Formula $\mu_{n+\Upsilon_{i\omega}}=\mu_{i}$
+\end_inset
+
+, so let's drop the first 
+\begin_inset Formula $n$
+\end_inset
+
+ and just use the 
+\begin_inset Formula $\mu_{\Upsilon_{i\iota}}$
+\end_inset
+
+.
+ This probably doesn't make sense to anyone else, but it will keep me sane
+ for the moment.
+ The score function is 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l}{\partial\mu_{\Upsilon_{kh}}} & \approx & -c_{k}\delta_{h\omega}+\sum_{i=1}^{n}\delta_{ki}\sum_{\iota=0}^{\omega}\delta_{h\iota}b\left(\iota,\omega,y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}\\
+ & = & -c_{k}\delta_{h\omega}+b\left(h,\omega,y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
+\end{eqnarray}
+
+\end_inset
+
+and the diagonal observed information is 
+\begin_inset Formula 
+\begin{equation}
+\frac{\partial^{2}l}{\partial\mu_{\Upsilon_{kh}}^{2}}\approx b\left(h,\omega,y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
+\end{equation}
+
+\end_inset
+
+At least this math is quite simple.
+ It's also possible that 
+\begin_inset Formula $\omega$
+\end_inset
+
+ may depend on 
+\begin_inset Formula $k$
+\end_inset
+
+ (it would be a sensible way to operate) so that 
+\begin_inset Formula 
+\begin{eqnarray}
+l & \approx & -\sum_{i=1}^{n}c_{i}\mu_{\Upsilon_{i\omega}}+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega_{i}}b\left(\iota,\omega_{i},y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}\\
+\frac{\partial l}{\partial\mu_{\Upsilon_{kh}}} & \approx & -c_{k}\delta_{h\omega_{k}}+b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\\
+\frac{\partial^{2}l}{\partial\mu_{\Upsilon_{kh}}^{2}} & \approx & b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
+\end{eqnarray}
+
+\end_inset
+
+This approximation is not as convenient as my previous one.
+ It is, however, infinitely more correct.
+ The new 
+\begin_inset Formula $\mathbf{z}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+ are 
+\begin_inset Formula 
+\begin{eqnarray}
+Q_{\Upsilon_{kh}\Upsilon_{kh}} & = & \frac{1}{2}b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\\
+z_{\Upsilon_{kh}} & = & \mathbf{\eta_{\Upsilon_{kh}}}-\frac{1}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}\left(-c_{k}\delta_{h\omega}+b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\right)\\
+ & = & \mathbf{\eta_{\Upsilon_{kh}}}-\left(-\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}+1\right)\\
+ & = & \mu_{\Upsilon_{kh}}+\left(\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}-1\right)
+\end{eqnarray}
+
+\end_inset
+
+The unconstrained solution is 
+\begin_inset Formula 
+\begin{eqnarray}
+0 & = & \frac{\partial l}{\partial\mu_{\Upsilon_{kh}}}\\
+ & = & -c_{k}\delta_{h\omega_{k}}+b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\\
+c_{k}\delta_{h\omega_{k}} & = & b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\\
+e^{\mu_{\Upsilon_{kh}}} & = & \frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}\\
+\mu_{\Upsilon_{kh}} & = & \log\left(\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}\right)
+\end{eqnarray}
+
+\end_inset
+
+but of course this solution is gives an infinitely negative loss with the
+ hazard being zero everywhere except the event points.
+ A good starting point might be some shrunken version, 
+\begin_inset Formula 
+\begin{equation}
+\tilde{\mu}_{\Upsilon_{kh}}=\log\left(\frac{\left(\left(1-2\epsilon\right)\delta_{h\omega_{k}}c_{k}+\epsilon\right)}{b\left(h,\omega_{k},y_{k}\right)}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\epsilon$
+\end_inset
+
+ is some fairly small number, like 
+\begin_inset Formula $\frac{1}{10}$
+\end_inset
+
+ or something.
+\end_layout
+
+\begin_layout Subsection*
+Rectangle rule
+\end_layout
+
+\begin_layout Standard
+If we're using the rectangle rule then 
+\begin_inset Formula 
+\begin{equation}
+b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\delta_{\iota0}\right)
+\end{equation}
+
+\end_inset
+
+for the top right corner approximation.
+ For the top left corner approximation, it's 
+\begin_inset Formula 
+\begin{equation}
+b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\delta_{\iota\omega}\right)
+\end{equation}
+
+\end_inset
+
+and for the midpoint approximation it's
+\begin_inset Formula 
+\begin{equation}
+b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\frac{1}{2}\delta_{\iota0}\delta_{\iota\omega}\right)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+Trapezoid rule
+\end_layout
+
+\begin_layout Standard
+Because the selection of sample points isn't changing, the trapezoid rule
+ is identical to the midpoint rectangle rule above.
+\end_layout
+
 \begin_layout Standard
 \begin_inset CommandInset bibtex
 LatexCommand bibtex

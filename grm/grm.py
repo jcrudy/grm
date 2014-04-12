@@ -37,13 +37,6 @@ class LossFunction(object):
         '''
 
     @abstractmethod
-    def get_params(self, kwargs):
-        '''
-        All this does is pick out the relevant arguments from kwargs and return
-        a dict containing only them.
-        '''
-
-    @abstractmethod
     def eval(self, mu, y, **kwargs):
         '''
         Evaluate the loss function
@@ -60,10 +53,21 @@ class LossFunction(object):
         pass
 
     @abstractmethod
-    def alter_arguments(self, X, y=None, **kwargs):
+    def alter_fitting_arguments(self, X, y=None, **kwargs):
+        pass
+    
+    @abstractmethod
+    def alter_prediction_arguments(self, X, y=None, **kwargs):
         pass
 
 class LinkableLossFunction(LossFunction):
+    @abstractmethod
+    def get_params(self, kwargs):
+        '''
+        All this does is pick out the relevant arguments from kwargs and return
+        a dict containing only them.
+        '''
+        
     def __init__(self, link_function):
         self.link_function = link_function
 
@@ -75,8 +79,12 @@ class LinkableLossFunction(LossFunction):
         link_params = self.link_function.get_params(kwargs)
         return self.link_function.eval(mu, **link_params)
 
-    def alter_arguments(self, X, y=None, **kwargs):
+    def alter_fitting_arguments(self, X, y=None, **kwargs):
         return X, y, kwargs
+    
+    def alter_prediction_arguments(self, X, y=None, **kwargs):
+        return X, y, kwargs
+
 
 class IndependentLinkableLossFunction(LinkableLossFunction):
 
@@ -154,52 +162,132 @@ class BinomialLossFunction(IndependentLinkableLossFunction):
                (1.0 - self.starting_point_factor) * y / n
 
 class LogHazardLossFunction(LossFunction):
-    def get_params(self, kwargs):
-        return {'c': kwargs['c'],
-                'N': kwargs['N'],
-                'nu': kwargs['nu'],
-                'rank': kwargs['rank']}
-
-    def alter_arguments(self, X, y=None, **kwargs):
-        kwargs = kwargs.copy()
+    def __init__(self, integration_points=10):
+        '''
+        integration_points : number of points at which to approximate the integral per unit time
+        '''
+        self.integration_points = integration_points
+    
+    @abstractmethod
+    def _b(self, iota, omega, y):
+        pass
+    
+    def _X_y_c_iota_omega(self, X, y, c):
+        point_counts = numpy.ceil(y * self.integration_points).astype(int)
+        omega = numpy.repeat(point_counts, point_counts + 1)
+        if X is not None:
+            X_ = numpy.repeat(X, point_counts + 1, 0)
+        else:
+            X_ = None
+        y_ = numpy.repeat(y, point_counts + 1)
+        c_ = numpy.zeros(shape=y_.shape, dtype=int)
+        iota = numpy.empty(shape=y_.shape, dtype=int)
+        idx = 0
+        for i, num in enumerate(point_counts):
+            c_[idx] = c[i]
+            try:
+                iota[idx:(idx+num+1)] = numpy.arange(0, num + 1)
+            except:
+                iota[idx:(idx+num+1)] = numpy.arange(0, num + 1)
+            idx += num + 1
+        return X_, y_, c_, iota, omega
         
-        # Check for time
-        if y is None and 't' in kwargs:
+    def alter_fitting_arguments(self, X, y, **kwargs):
+        X_, y_, c_, iota, omega = self._X_y_c_iota_omega(X, y, kwargs['c'])
+        b = self._b(iota, omega, y_)
+        kwargs = kwargs.copy()
+        kwargs['b'] = b
+        kwargs['c'] = c_
+        if X is not None:
+            return numpy.c_[X_, y], y_, kwargs
+        else:
+            return y_, y_, kwargs
+    
+    def alter_prediction_arguments(self, X, **kwargs):
+        if 't' in kwargs:
             y = kwargs['t']
-            del kwargs['t']
-            
-        # Compute sort-based extra arguments
-        m = y.shape[0]
-        order = numpy.argsort(y)
-        rank = stats.rankdata(y).astype(int) - 1
-        N = m - rank
-        nu = y.copy()
-        nu[rank > 0] -= y[order][rank[rank > 0] - 1]
-        kwargs['rank'] = rank
-        kwargs['nu'] = nu
-        kwargs['N'] = N
+        elif 'y' in kwargs:
+            y = kwargs['y']
+        else:
+            raise ValueError('Must provide times for log hazard prediction (t or y argument)')
         if X is not None:
             return numpy.c_[X, y], y, kwargs
         else:
             return y, y, kwargs
 
-    def eval(self, mu, y, c, N, nu, rank):
-        return -numpy.sum(c * mu) + numpy.sum(nu * numpy.exp(mu) * N)
-
-    def predict(self, eta, N, nu, rank, c=None):
+    def predict(self, eta, b=None, c=None):
         return eta
 
-    def inverse_predict(self, mu, c, N, nu, rank):
+    def inverse_predict(self, mu, b=None, c=None):
         return mu
-
-    def starting_point(self, X, y, base_regressor, loss_function,
-                       c, N, nu, rank):
-        return numpy.log((0.9 * (c==1) + 0.1 * (c==0)) / numpy.maximum(0.0000001, nu * N))
-
-    def step(self, mu, y, c, N, nu, rank):
-        w = 0.5 * nu * numpy.exp(mu) * N
-        z = mu + (0.5 * c / w) - 1.0
+    
+    def eval(self, mu, y, c, b):
+        return numpy.sum(b * numpy.exp(mu)) - numpy.sum(c * mu)
+    
+    def step(self, mu, y, c, b):
+        exp_mu = numpy.exp(mu)
+        w = 0.5 * b * exp_mu
+        z = mu + (c / (b * exp_mu)) - 1.0
         return z, w
+    
+    def starting_point(self, X, y, base_regressor, loss_function,
+                       c, b):
+        try:
+            return numpy.log((0.8 * c + 0.1) / b)
+        except:
+            return numpy.log((0.8 * c + 0.1) / b)
+
+class MidpointLogHazardLossFunction(LogHazardLossFunction):
+    def _b(self, iota, omega, y):
+        return (y / omega) * (1.0 - 0.5*(iota==0)*(iota==omega))
+        
+# class LogHazardLossFunction(LossFunction):
+#     def get_params(self, kwargs):
+#         return {'c': kwargs['c'],
+#                 'N': kwargs['N'],
+#                 'nu': kwargs['nu'],
+#                 'rank': kwargs['rank']}
+# 
+#     def alter_fitting_arguments(self, X, y=None, **kwargs):
+#         kwargs = kwargs.copy()
+#         
+#         # Check for time
+#         if y is None and 't' in kwargs:
+#             y = kwargs['t']
+#             del kwargs['t']
+#             
+#         # Compute sort-based extra arguments
+#         m = y.shape[0]
+#         order = numpy.argsort(y)
+#         rank = stats.rankdata(y).astype(int) - 1
+#         N = m - rank
+#         nu = y.copy()
+#         nu[rank > 0] -= y[order][rank[rank > 0] - 1]
+#         kwargs['rank'] = rank
+#         kwargs['nu'] = nu
+#         kwargs['N'] = N
+#         if X is not None:
+#             return numpy.c_[X, y], y, kwargs
+#         else:
+#             return y, y, kwargs
+# 
+#     def eval(self, mu, y, c, N, nu, rank):
+#         return -numpy.sum(c * mu) + numpy.sum(nu * numpy.exp(mu) * N)
+# 
+#     def predict(self, eta, N, nu, rank, c=None):
+#         return eta
+# 
+#     def inverse_predict(self, mu, c, N, nu, rank):
+#         return mu
+# 
+#     def starting_point(self, X, y, base_regressor, loss_function,
+#                        c, N, nu, rank):
+#         return numpy.log((0.9 * (c==1) + 0.1 * (c==0)) / numpy.maximum(0.0000001, nu * N))
+# 
+#     def step(self, mu, y, c, N, nu, rank):
+#         w = 0.5 * nu * numpy.exp(mu) * N
+#         z = mu + (0.5 * c / w) - 1.0
+#         return z, w
 
 # class ExponentialFamilyLossFunction(LinkableLossFunction):
 #     @abstractmethod
@@ -357,7 +445,7 @@ class GeneralizedRegressor(BaseEstimator):
 
     def fit(self, X, y, **kwargs):
         # Alter arguments if necessary
-        X, y, kwargs = self.loss_function.alter_arguments(X, y, **kwargs)
+        X, y, kwargs = self.loss_function.alter_fitting_arguments(X, y, **kwargs)
 
         # Initialize mu, eta, and loss before first iteration
         mu = self.loss_function.starting_point(X, y, self.base_regressor,
@@ -412,7 +500,7 @@ class GeneralizedRegressor(BaseEstimator):
     def predict(self, X, **kwargs):
         
         # Alter arguments if necessary
-        X, _, kwargs = self.loss_function.alter_arguments(X, None, **kwargs)
+        X, _, kwargs = self.loss_function.alter_prediction_arguments(X, None, **kwargs)
         
         # Predict from the inner regressor
         eta = self.regressor_.predict(X)
