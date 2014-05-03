@@ -38,3 +38,13 @@ nosetests.xml
 *.lyx~
 
 *.lyx#
+
+*.pickle
+
+*.png
+
+*.emergency
+
+settings_with_employer_groups.conf
+
+notes/so1.lyx

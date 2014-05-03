@@ -1151,9 +1151,9 @@ l=-\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\int_{0}^{y_{i
 so with this approximation it's 
 \begin_inset Formula 
 \begin{eqnarray}
-l & \approx & -\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega\right)}\right)\\
- & = & -\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega\right)}\\
- & = & -\sum_{i=1}^{n}c_{i}\mu_{\Upsilon_{i\omega}}+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega}b\left(\iota,\omega,y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}
+l & \approx & -\sum_{i=1}^{n}\left(c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)-\sum_{\iota=0}^{\omega_{i}}b\left(\iota,\omega_{i},y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega_{i}\right)}\right)\\
+ & = & -\sum_{i=1}^{n}c_{i}\phi\left(\mathbf{x}_{i},y_{i}\right)+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega_{i}}b\left(\iota,\omega_{i},y_{i}\right)e^{\phi\left(\mathbf{x}_{i},\iota y_{i}/\omega_{i}\right)}\\
+ & = & -\sum_{i=1}^{n}c_{i}\mu_{\Upsilon_{i\omega}}+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega_{i}}b\left(\iota,\omega_{i},y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}
 \end{eqnarray}
 
 \end_inset
@@ -1198,8 +1198,8 @@ Note that there are now
  The score function is 
 \begin_inset Formula 
 \begin{eqnarray}
-\frac{\partial l}{\partial\mu_{\Upsilon_{kh}}} & \approx & -c_{k}\delta_{h\omega}+\sum_{i=1}^{n}\delta_{ki}\sum_{\iota=0}^{\omega}\delta_{h\iota}b\left(\iota,\omega,y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}\\
- & = & -c_{k}\delta_{h\omega}+b\left(h,\omega,y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
+\frac{\partial l}{\partial\mu_{\Upsilon_{kh}}} & \approx & -c_{k}\delta_{h\omega}+\sum_{i=1}^{n}\delta_{ki}\sum_{\iota=0}^{\omega_{i}}\delta_{h\iota}b\left(\iota,\omega_{i},y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}\\
+ & = & -c_{k}\delta_{h\omega}+b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
 \end{eqnarray}
 
 \end_inset
@@ -1207,21 +1207,13 @@ Note that there are now
 and the diagonal observed information is 
 \begin_inset Formula 
 \begin{equation}
-\frac{\partial^{2}l}{\partial\mu_{\Upsilon_{kh}}^{2}}\approx b\left(h,\omega,y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
+\frac{\partial^{2}l}{\partial\mu_{\Upsilon_{kh}}^{2}}\approx b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}
 \end{equation}
 
 \end_inset
 
 At least this math is quite simple.
- It's also possible that 
-\begin_inset Formula $\omega$
-\end_inset
-
- may depend on 
-\begin_inset Formula $k$
-\end_inset
-
- (it would be a sensible way to operate) so that 
+ To review: 
 \begin_inset Formula 
 \begin{eqnarray}
 l & \approx & -\sum_{i=1}^{n}c_{i}\mu_{\Upsilon_{i\omega}}+\sum_{i=1}^{n}\sum_{\iota=0}^{\omega_{i}}b\left(\iota,\omega_{i},y_{i}\right)e^{\mu_{\Upsilon_{i\iota}}}\\
@@ -1247,7 +1239,8 @@ This approximation is not as convenient as my previous one.
 Q_{\Upsilon_{kh}\Upsilon_{kh}} & = & \frac{1}{2}b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\\
 z_{\Upsilon_{kh}} & = & \mathbf{\eta_{\Upsilon_{kh}}}-\frac{1}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}\left(-c_{k}\delta_{h\omega}+b\left(h,\omega_{k},y_{k}\right)e^{\mu_{\Upsilon_{kh}}}\right)\\
  & = & \mathbf{\eta_{\Upsilon_{kh}}}-\left(-\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}+1\right)\\
- & = & \mu_{\Upsilon_{kh}}+\left(\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}-1\right)
+ & = & \mu_{\Upsilon_{kh}}+\left(\frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{k},y_{k}\right)}e^{-\mu_{\Upsilon_{kh}}}-1\right)\\
+ & = & \mu_{\Upsilon_{kh}}+\frac{1}{b\left(h,\omega_{k},y_{k}\right)}\left(c_{k}\delta_{h\omega_{k}}e^{-\mu_{\Upsilon_{kh}}}-b\left(h,\omega_{k},y_{k}\right)\right)
 \end{eqnarray}
 
 \end_inset
@@ -1264,8 +1257,8 @@ e^{\mu_{\Upsilon_{kh}}} & = & \frac{c_{k}\delta_{h\omega_{k}}}{b\left(h,\omega_{
 
 \end_inset
 
-but of course this solution is gives an infinitely negative loss with the
- hazard being zero everywhere except the event points.
+but of course this solution gives an infinitely negative loss with the hazard
+ being zero everywhere except the event points.
  A good starting point might be some shrunken version, 
 \begin_inset Formula 
 \begin{equation}
@@ -1310,7 +1303,7 @@ b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\delta_{\iota\omega}\right)
 and for the midpoint approximation it's
 \begin_inset Formula 
 \begin{equation}
-b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\frac{1}{2}\delta_{\iota0}\delta_{\iota\omega}\right)
+b\left(\iota,\omega,y\right)=\frac{y}{\omega}\left(1-\frac{1}{2}\left(\delta_{\iota0}+\delta_{\iota\omega}\right)\right)
 \end{equation}
 
 \end_inset
@@ -1325,6 +1318,145 @@ Trapezoid rule
 \begin_layout Standard
 Because the selection of sample points isn't changing, the trapezoid rule
  is identical to the midpoint rectangle rule above.
+\end_layout
+
+\begin_layout Subsection*
+Others
+\end_layout
+
+\begin_layout Standard
+It might be good to look at Simpson's rule and Gaussian quadrature at some
+ point.
+\end_layout
+
+\begin_layout Section*
+Penalized complexity
+\end_layout
+
+\begin_layout Standard
+MARS doesn't actually minimize squared error.
+ I guess I lied a little.
+ Instead, it minimizes GCV, which is a squared error that is also penalized
+ by the complexity of the model.
+ The GCV is
+\begin_inset Formula 
+\begin{equation}
+GCV\left(\mathbf{y},\mathbf{\eta}\right)=\alpha+\beta\left(\mathbf{z}-\mathbf{\eta}\right)^{T}\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula 
+\begin{equation}
+\beta=\frac{1}{N}\left(1-\frac{C\left(M\right)}{N}\right)^{-2}
+\end{equation}
+
+\end_inset
+
+Fortunately, 
+\begin_inset Formula $\beta$
+\end_inset
+
+ does not depend on 
+\begin_inset Formula $\mathbf{\eta}$
+\end_inset
+
+.
+ How should this adjustment affect 
+\begin_inset Formula $\mathbf{z}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{W}$
+\end_inset
+
+? More importantly, how should sample weighting be accounted for in 
+\begin_inset Formula $\beta$
+\end_inset
+
+? I propose the following:
+\begin_inset Formula 
+\begin{eqnarray}
+\beta & = & \frac{1}{tr\left(\mathbf{Q}\right)}\left(1-\frac{C\left(M\right)}{tr\left(\mathbf{Q}\right)}\right)^{-2}\\
+ & = & tr\left(\mathbf{Q}\right)^{-1}\left(1-\frac{C\left(M\right)}{tr\left(\mathbf{Q}\right)}\right)^{-2}\\
+ & = & \sqrt{tr\left(\mathbf{Q}\right)}^{-2}\left(1-\frac{C\left(M\right)}{tr\left(\mathbf{Q}\right)}\right)^{-2}\\
+ & = & \left(\sqrt{tr\left(\mathbf{Q}\right)}-\frac{C\left(M\right)}{\sqrt{tr\left(\mathbf{Q}\right)}}\right)^{-2}
+\end{eqnarray}
+
+\end_inset
+
+for diagonal 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+, which is the only kind I am currently considering.
+ A few observations:
+\end_layout
+
+\begin_layout Enumerate
+During pruning, for a fixed 
+\begin_inset Formula $N$
+\end_inset
+
+ and fixed 
+\begin_inset Formula $\mathbf{Q}$
+\end_inset
+
+, this change in GCV will not affect the order in which terms are pruned.
+\end_layout
+
+\begin_layout Enumerate
+This change in GCV will affect which step in pruning is the optimal step.
+ That is, it will affect the final number of terms pruned.
+\end_layout
+
+\begin_layout Enumerate
+This change in GCV will affect whether linear terms are chosed in allow_linear=T
+rue.
+\end_layout
+
+\begin_layout Standard
+The Taylor series for the GCV is different than for squared error loss and
+ will produce different solutions.
+ Let 
+\begin_inset Formula $\mathbf{\eta}=\mathbf{\eta_{0}}+\mathbf{\Delta\eta}$
+\end_inset
+
+ and 
+\begin_inset Formula $l^{\prime}\left(\mathbf{\eta}\right)=GCV\left(\mathbf{y},\mathbf{\eta}\right)$
+\end_inset
+
+.
+ The Taylor series is 
+\begin_inset Formula 
+\begin{equation}
+l^{\prime}\left(\mathbf{\eta_{0}}+\mathbf{\Delta\eta}\right)=l^{\prime}\left(\mathbf{\eta_{0}}\right)+\frac{\partial l^{\prime}}{\partial\mathbf{\eta}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}+\frac{1}{2}\mathbf{\Delta\eta}^{T}\frac{\partial^{2}l^{\prime}}{\partial\mathbf{\eta}^{2}}\left(\mathbf{\eta_{0}}\right)\mathbf{\Delta\eta}
+\end{equation}
+
+\end_inset
+
+and 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\partial l^{\prime}}{\partial\mathbf{\eta}} & = & -2\beta\mathbf{Q}\left(\mathbf{z}-\mathbf{\eta}\right)\\
+\frac{\partial^{2}l^{\prime}}{\partial\mathbf{\eta}^{2}} & = & 2\beta\mathbf{Q}
+\end{eqnarray}
+
+\end_inset
+
+Perhaps a better solution would be to disable pruning altogether and instead
+ use a penalized loss function.
+ If I stick with my original formulation, the resulting ILFA loss function
+ is a Taylor approximation for ...
+\end_layout
+
+\begin_layout Section*
+Getting into MARS
+\end_layout
+
+\begin_layout Standard
+What if instead of GCV I used a roughness penalty in MARS?
 \end_layout
 
 \begin_layout Standard

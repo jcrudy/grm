@@ -2,6 +2,7 @@ from sklearn.base import BaseEstimator, RegressorMixin, clone
 import numpy
 import scipy.stats as stats
 from abc import ABCMeta, abstractmethod
+from matplotlib import pyplot
 
 class LinearRegressor(BaseEstimator, RegressorMixin):
     def fit(self, X, y, sample_weight=None):
@@ -172,7 +173,7 @@ class LogHazardLossFunction(LossFunction):
     def _b(self, iota, omega, y):
         pass
     
-    def _X_y_c_iota_omega(self, X, y, c):
+    def _X_y_b_c_iota_omega(self, X, y, c):
         point_counts = numpy.ceil(y * self.integration_points).astype(int)
         omega = numpy.repeat(point_counts, point_counts + 1)
         if X is not None:
@@ -184,22 +185,29 @@ class LogHazardLossFunction(LossFunction):
         iota = numpy.empty(shape=y_.shape, dtype=int)
         idx = 0
         for i, num in enumerate(point_counts):
-            c_[idx] = c[i]
+            c_[idx+num] = c[i]
             try:
                 iota[idx:(idx+num+1)] = numpy.arange(0, num + 1)
             except:
                 iota[idx:(idx+num+1)] = numpy.arange(0, num + 1)
             idx += num + 1
-        return X_, y_, c_, iota, omega
+        b = self._b(iota, omega, y_)
+        y_ *= iota / omega.astype(float)
+        return X_, y_, c_, b, iota, omega
         
     def alter_fitting_arguments(self, X, y, c):
-        X_, y_, c_, iota, omega = self._X_y_c_iota_omega(X, y, c)
-        b = self._b(iota, omega, y_)
+        X_, y_, c_, b, iota, omega = self._X_y_b_c_iota_omega(X, y, c)
+#         ecdf = ECDF(y)
+#         events_cdf = ECDF(y[c==1])
+#         at_risk = 1 - ecdf(y)
+#         dead
+#         s = ecdf(y_) / ()  
+#         srt = numpy.argsort(y)
         kwargs = {'b': b, 'c': c_}
         if X is not None:
-            return numpy.c_[X_, y], y_, kwargs
+            return numpy.c_[X_, y_], y_, kwargs
         else:
-            return y_, y_, kwargs
+            return y_.reshape((y_.shape[0],1)), y_, kwargs
     
     def alter_prediction_arguments(self, X, y=None, t=None):
         if t is not None:
@@ -211,7 +219,7 @@ class LogHazardLossFunction(LossFunction):
         if X is not None:
             return numpy.c_[X, y], {}
         else:
-            return y, {}
+            return y.reshape((y.shape[0],1)), {}
 
     def predict(self, eta, b=None, c=None):
         return eta
@@ -225,19 +233,17 @@ class LogHazardLossFunction(LossFunction):
     def step(self, mu, y, c, b):
         exp_mu = numpy.exp(mu)
         w = 0.5 * b * exp_mu
+#         w /= numpy.mean(w)
         z = mu + (c / (b * exp_mu)) - 1.0
         return z, w
     
     def starting_point(self, X, y, base_regressor, loss_function,
                        c, b):
-        try:
-            return numpy.log((0.8 * c + 0.1) / b)
-        except:
-            return numpy.log((0.8 * c + 0.1) / b)
+        return numpy.log((0.6 * c + 0.2) / b)
 
 class MidpointLogHazardLossFunction(LogHazardLossFunction):
     def _b(self, iota, omega, y):
-        return (y / omega) * (1.0 - 0.5*(iota==0)*(iota==omega))
+        return (y / omega) * (1.0 - 0.5*((iota==0)|(iota==omega)))
         
 # class LogHazardLossFunction(LossFunction):
 #     def get_params(self, kwargs):
@@ -443,43 +449,56 @@ class GeneralizedRegressor(BaseEstimator):
 
     def fit(self, X, y, **kwargs):
         # Alter arguments if necessary
-        X, y, kwargs = self.loss_function.alter_fitting_arguments(X, y, **kwargs)
+        X_, y_, kwargs = self.loss_function.alter_fitting_arguments(X, y, **kwargs)
 
         # Initialize mu, eta, and loss before first iteration
-        mu = self.loss_function.starting_point(X, y, self.base_regressor,
+        mu = self.loss_function.starting_point(X_, y_, self.base_regressor,
                                                self.loss_function, **kwargs)
         eta = self.loss_function.inverse_predict(mu, **kwargs)
-        loss = self.loss_function.eval(mu, y, **kwargs)
+        loss = float('inf') #self.loss_function.eval(mu, y_, **kwargs)
         relaxation_factor = 1.0
         i = 0
         while i <= self.max_iter:
 
             # Compute the adjusted response and weights for the inner fitting step
-            z, w = self.loss_function.step(mu, y, **kwargs)
-
+            z, w = self.loss_function.step(mu, y_, **kwargs)
+            print 'Total weight: %f' % numpy.sum(w)
+            
             # Fit the new inner regressor
             new_regressor = clone(self.base_regressor)
-            new_regressor.fit(X, z, sample_weight=w)
-
+            new_regressor.fit(X_, z, sample_weight=w)
+            
             # Estimate the new eta and mu
-            new_eta = new_regressor.predict(X)
+            try:
+                print new_regressor.summary()
+            except: 
+                print new_regressor
+            new_eta = new_regressor.predict(X_)
             new_mu = self.loss_function.predict(new_eta, **kwargs)
+            
+#             pyplot.figure()
+#             pyplot.plot(y_,z,'b.',label='z')
+#             pyplot.plot(y_,new_mu,'r.',label='mu')
+# #             pyplot.ylim(-10,10)
+#             pyplot.legend()
+#             pyplot.show()
 
             # Calculate the loss
-            new_loss = self.loss_function.eval(new_mu, y, **kwargs)
-
+            new_loss = self.loss_function.eval(new_mu, y_, **kwargs)
+            print new_loss
             # Check for convergence
-            self.convergence_test.append(new_regressor, new_loss, X, y, new_eta, new_mu)
+            self.convergence_test.append(new_regressor, new_loss, X_, y_, new_eta, new_mu)
             if self.convergence_test.check():
                 regressor = new_regressor
                 break
 
             # Adjust the relaxation factor for the next iteration
             if new_loss > loss:
-                relaxation_factor *= 0.5
-            elif new_loss < loss and relaxation_factor < 1.0:
-                relaxation_factor = 1.0
-
+                break #TODO: Replace this with a line search over relaxation space
+#                 relaxation_factor *= 0.5
+#             elif new_loss < loss and relaxation_factor < 1.0:
+#                 relaxation_factor = 1.0
+            print relaxation_factor
             # Apply the relaxation factor for the next iteration
             if relaxation_factor != 1.0:
                 new_eta = (relaxation_factor)*eta + (1.0 - relaxation_factor)*new_eta
