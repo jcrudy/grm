@@ -63,7 +63,7 @@ class LossFunction(object):
 
 class LinkableLossFunction(LossFunction):
     @abstractmethod
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         '''
         All this does is pick out the relevant arguments from kwargs and return
         a dict containing only them.
@@ -73,18 +73,18 @@ class LinkableLossFunction(LossFunction):
         self.link_function = link_function
 
     def predict(self, eta, **kwargs):
-        link_params = self.link_function.get_params(kwargs)
+        link_params = self.link_function.extract_params(kwargs)
         return self.link_function.inv(eta, **link_params)
 
     def inverse_predict(self, mu, **kwargs):
-        link_params = self.link_function.get_params(kwargs)
+        link_params = self.link_function.extract_params(kwargs)
         return self.link_function.eval(mu, **link_params)
 
     def alter_fitting_arguments(self, X, y, **kwargs):
         return X, y, kwargs
     
     def alter_prediction_arguments(self, X, **kwargs):
-        return X, y, kwargs
+        return X, kwargs
 
 
 class IndependentLinkableLossFunction(LinkableLossFunction):
@@ -104,8 +104,8 @@ class IndependentLinkableLossFunction(LinkableLossFunction):
         pass
 
     def step(self, mu, y, **kwargs):
-        link_params = self.link_function.get_params(kwargs)
-        loss_params = self.get_params(kwargs)
+        link_params = self.link_function.extract_params(kwargs)
+        loss_params = self.extract_params(kwargs)
         eta = self.link_function.eval(mu, **link_params)
         hessian = self.hessian(mu, y, **loss_params)
         score = self.score(mu, y, **loss_params)
@@ -117,7 +117,7 @@ class IndependentLinkableLossFunction(LinkableLossFunction):
         return z, w
 
 class NormalLossFunction(IndependentLinkableLossFunction):
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         return {}
 
     def hessian(self, mu, y):
@@ -138,7 +138,7 @@ class BinomialLossFunction(IndependentLinkableLossFunction):
         super(BinomialLossFunction, self).__init__(link_function)
         self.starting_point_factor = starting_point_factor
 
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         return {'n': kwargs['n']}
 
     def hessian(self, mu, y, n):
@@ -161,7 +161,19 @@ class BinomialLossFunction(IndependentLinkableLossFunction):
         mean = numpy.mean(y / n)
         return self.starting_point_factor * mean + \
                (1.0 - self.starting_point_factor) * y / n
-
+    
+    def alter_fitting_arguments(self, X, y, **kwargs):
+        if 'n' not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs['n'] = numpy.ones(X.shape[0], int)
+        return X, y, kwargs
+    
+    def alter_prediction_arguments(self, X, **kwargs):
+        if 'n' not in kwargs:
+            kwargs = kwargs.copy()
+            kwargs['n'] = numpy.ones(X.shape[0], int)
+        return X, kwargs
+    
 class LogHazardLossFunction(LossFunction):
     def __init__(self, integration_points=10):
         '''
@@ -246,7 +258,7 @@ class MidpointLogHazardLossFunction(LogHazardLossFunction):
         return (y / omega) * (1.0 - 0.5*((iota==0)|(iota==omega)))
         
 # class LogHazardLossFunction(LossFunction):
-#     def get_params(self, kwargs):
+#     def extract_params(self, kwargs):
 #         return {'c': kwargs['c'],
 #                 'N': kwargs['N'],
 #                 'nu': kwargs['nu'],
@@ -306,8 +318,8 @@ class MidpointLogHazardLossFunction(LogHazardLossFunction):
 #         This implementation uses Fisher scoring instead of an actual Newton
 #         step, which is pretty standard.
 #         '''
-#         link_params = self.link_function.get_params(kwargs)
-#         loss_params = self.get_params(kwargs)
+#         link_params = self.link_function.extract_params(kwargs)
+#         loss_params = self.extract_params(kwargs)
 #         variance = self.variance(mu, **loss_params)
 #         link_deriv = self.link_function.deriv(mu, **link_params)
 #
@@ -319,11 +331,11 @@ class MidpointLogHazardLossFunction(LogHazardLossFunction):
 #     def variance(self, mu, y, n_trials):
 #         return n_trials * mu * (1.0 - mu)
 #
-#     def get_params(self, kwargs):
+#     def extract_params(self, kwargs):
 #         return {'n_trials': kwargs['n_trials']}
 #
 # class NormalLossFunction(ExponentialFamilyLossFunction):
-#     def get_params(self, kwargs):
+#     def extract_params(self, kwargs):
 #         return {}
 #
 #     def variance(self, mu, y):
@@ -333,7 +345,7 @@ class LinkFunction(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         pass
 
     @abstractmethod
@@ -349,7 +361,7 @@ class LinkFunction(object):
         pass
 
 class IdentityLink(LinkFunction):
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         return {}
 
     def eval(self, mu):
@@ -362,7 +374,7 @@ class IdentityLink(LinkFunction):
         return numpy.ones_like(mu)
 
 class LogitLink(LinkFunction):
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         return {}
 
     def eval(self, mu):
@@ -375,7 +387,7 @@ class LogitLink(LinkFunction):
         return 1.0 / (mu - mu**2)
 
 class ExpLink(LinkFunction):
-    def get_params(self, kwargs):
+    def extract_params(self, kwargs):
         return {}
 
     def eval(self, mu):
@@ -446,7 +458,10 @@ class GeneralizedRegressor(BaseEstimator):
         self.loss_function = loss_function
         self.max_iter = max_iter
         self.convergence_test = convergence_test
-
+    
+    def transform(self, X, **kwargs):
+        return self.regressor_.transform(X, **kwargs)
+    
     def fit(self, X, y, **kwargs):
         # Alter arguments if necessary
         X_, y_, kwargs = self.loss_function.alter_fitting_arguments(X, y, **kwargs)

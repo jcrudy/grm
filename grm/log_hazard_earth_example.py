@@ -14,6 +14,7 @@ numpy.random.seed(1)
 
 m = 1000
 data_filename = 'log_hazard_data' + str(m) + '.pickle'
+modelfilename = 'log_hazard_model' + str(m) + '.pickle'
 redo = False
 if os.path.exists(data_filename) and not redo:
     with open(data_filename, 'r') as infile:
@@ -32,6 +33,8 @@ pyplot.show()
 t0 = time.time()
 model = GeneralizedRegressor(base_regressor=Earth(thresh=1e-7, max_terms=100, smooth=True, allow_linear=False, penalty=0), loss_function=MidpointLogHazardLossFunction(10))
 model.fit(X=None,y=y,c=c)
+with open(modelfilename, 'w') as outfile:
+    pickle.dump(model, outfile)
 t1 = time.time()
 print 'Total fitting time: %f seconds' % (t1 - t0)
 t = numpy.arange(0.0, 30.0, .1)
